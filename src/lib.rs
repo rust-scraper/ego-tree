@@ -169,27 +169,27 @@ impl<'a, T: 'a> Ref<'a, T> {
     }
 
     /// Returns a reference to the parent node.
-    pub fn parent(&self) -> Option<Ref<T>> {
+    pub fn parent(&self) -> Option<Ref<'a, T>> {
         self.node.parent.map(|id| self.tree.get(id))
     }
 
     /// Returns a reference to the previous sibling.
-    pub fn prev_sibling(&self) -> Option<Ref<T>> {
+    pub fn prev_sibling(&self) -> Option<Ref<'a, T>> {
         self.node.prev_sibling.map(|id| self.tree.get(id))
     }
 
     /// Returns a reference to the next sibling.
-    pub fn next_sibling(&self) -> Option<Ref<T>> {
+    pub fn next_sibling(&self) -> Option<Ref<'a, T>> {
         self.node.next_sibling.map(|id| self.tree.get(id))
     }
 
     /// Returns a reference to the first child.
-    pub fn first_child(&self) -> Option<Ref<T>> {
+    pub fn first_child(&self) -> Option<Ref<'a, T>> {
         self.node.children.map(|(id, _)| self.tree.get(id))
     }
 
     /// Returns a reference to the last child.
-    pub fn last_child(&self) -> Option<Ref<T>> {
+    pub fn last_child(&self) -> Option<Ref<'a, T>> {
         self.node.children.map(|(_, id)| self.tree.get(id))
     }
 
