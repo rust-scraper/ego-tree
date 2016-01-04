@@ -114,11 +114,21 @@ impl<'a, T: 'a> Eq for Ref<'a, T> { }
 ///
 /// Note that accesses to the node may be slower than `Ref`, since `RefMut` cannot directly hold a
 /// reference to the node.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct RefMut<'a, T: 'a> {
     tree: &'a mut Tree<T>,
     id: Id<T>,
 }
+
+// Manual implementations that don't care about T.
+impl<'a, T: 'a> PartialEq for RefMut<'a, T> {
+    #[allow(trivial_casts)]
+    fn eq(&self, other: &Self) -> bool {
+        self.tree as *const _ == other.tree as *const _
+            && self.id == other.id
+    }
+}
+impl<'a, T: 'a> Eq for RefMut<'a, T> { }
 
 impl<T> Tree<T> {
     /// Creates a new tree with a root node.
