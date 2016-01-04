@@ -232,6 +232,12 @@ impl<T> Tree<T> {
     }
 }
 
+impl<T: Default> Default for Tree<T> {
+    fn default() -> Self {
+        Tree::new(T::default())
+    }
+}
+
 impl<'a, T: 'a> Ref<'a, T> {
     /// Returns the value of the node.
     pub fn value(&self) -> &T {
