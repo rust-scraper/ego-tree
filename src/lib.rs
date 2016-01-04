@@ -286,7 +286,6 @@ impl<'a, T: 'a> Ref<'a, T> {
 
 impl<'a, T: 'a> Into<Ref<'a, T>> for RefMut<'a, T> {
     fn into(self) -> Ref<'a, T> {
-        // Safe: RefMut can only be created by Tree, which validates the Id.
         Ref {
             tree: self.tree,
             node: self.tree.get_node_unchecked(self.id),
