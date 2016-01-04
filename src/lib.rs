@@ -32,11 +32,16 @@
 )]
 
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+
+// Used to ensure that an Id can only be used with the same Tree that created it.
+static mut tree_id_seq: AtomicUsize = ATOMIC_USIZE_INIT;
 
 /// A tree.
 // TODO: Implement Debug manually.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tree<T> {
+    id: usize,
     vec: Vec<Node<T>>,
 }
 
@@ -62,22 +67,28 @@ impl<T> Node<T> {
 }
 
 /// A node ID.
-///
-/// Caution: since IDs are not tied to the tree which created them, it is possible to use them on
-/// other trees, resulting in retrieving the wrong data or causing an out-of-bounds panic.
 #[derive(Debug)]
 pub struct Id<T> {
-    id: usize,
+    tree_id: usize,
+    index: usize,
     data: PhantomData<T>,
 }
 
 // Manual implementations that don't care about T.
 impl<T> Clone for Id<T> {
-    fn clone(&self) -> Self { Id { id: self.id, data: PhantomData } }
+    fn clone(&self) -> Self {
+        Id {
+            tree_id: self.tree_id,
+            index: self.index,
+            data: PhantomData,
+        }
+    }
 }
 impl<T> Copy for Id<T> { }
 impl<T> PartialEq for Id<T> {
-    fn eq(&self, other: &Self) -> bool { self.id == other.id }
+    fn eq(&self, other: &Self) -> bool {
+        self.tree_id == other.tree_id && self.index == other.index
+    }
 }
 impl<T> Eq for Id<T> { }
 
@@ -133,25 +144,35 @@ impl<'a, T: 'a> Eq for RefMut<'a, T> { }
 impl<T> Tree<T> {
     /// Creates a new tree with a root node.
     pub fn new(root: T) -> Self {
-        Tree { vec: vec![Node::new(root)] }
+        // Safe: atomic.
+        Tree {
+            id: unsafe { tree_id_seq.fetch_add(1, Ordering::Relaxed) },
+            vec: vec![Node::new(root)],
+        }
     }
 
     /// Creates a new tree of the specified capacity with a root node.
     pub fn with_capacity(root: T, capacity: usize) -> Self {
         let mut vec = Vec::with_capacity(capacity);
         vec.push(Node::new(root));
-        Tree { vec: vec }
+        // Safe: atomic.
+        Tree {
+            id: unsafe { tree_id_seq.fetch_add(1, Ordering::Relaxed) },
+            vec: vec,
+        }
     }
 
     /// Returns a reference to the specified node.
     ///
     /// # Panics
     ///
-    /// Panics if `id` does not exist in this tree.
+    /// Panics if `id` does not refer to a node in this tree.
     pub fn get(&self, id: Id<T>) -> Ref<T> {
+        assert_eq!(self.id, id.tree_id);
+        // Safe: We created the Id, so its index is valid.
         Ref {
             tree: self,
-            node: &self.vec[id.id],
+            node: unsafe { self.vec.get_unchecked(id.index) },
             id: id,
         }
     }
@@ -160,29 +181,37 @@ impl<T> Tree<T> {
     ///
     /// # Panics
     ///
-    /// Panics if `id` does not exist in this tree.
+    /// Panics if `id` does not refer to a node in this tree.
     pub fn get_mut(&mut self, id: Id<T>) -> RefMut<T> {
-        // Check bounds.
-        { let _ = &self.vec[id.id]; }
+        assert_eq!(self.id, id.tree_id);
         RefMut {
             tree: self,
             id: id,
         }
     }
 
+    fn id_for(&self, index: usize) -> Id<T> {
+        Id {
+            tree_id: self.id,
+            index: index,
+            data: PhantomData,
+        }
+    }
+
     /// Returns a reference to the root node.
     pub fn root(&self) -> Ref<T> {
-        self.get(Id { id: 0, data: PhantomData })
+        self.get(self.id_for(0))
     }
 
     /// Returns a mutable reference to the root node.
     pub fn root_mut(&mut self) -> RefMut<T> {
-        self.get_mut(Id { id: 0, data: PhantomData })
+        let id = self.id_for(0);
+        self.get_mut(id)
     }
 
     /// Creates an orphan node.
     pub fn orphan(&mut self, value: T) -> RefMut<T> {
-        let id = Id { id: self.vec.len(), data: PhantomData };
+        let id = self.id_for(self.vec.len());
         self.vec.push(Node::new(value));
         self.get_mut(id)
     }
@@ -242,18 +271,29 @@ impl<'a, T: 'a> Ref<'a, T> {
 
 impl<'a, T: 'a> Into<Ref<'a, T>> for RefMut<'a, T> {
     fn into(self) -> Ref<'a, T> {
+        // Safe: RefMut can only be created by Tree, which validates the Id.
         Ref {
             tree: self.tree,
-            node: &self.tree.vec[self.id.id],
+            node: unsafe { self.tree.vec.get_unchecked(self.id.index) },
             id: self.id,
         }
     }
 }
 
 impl<'a, T: 'a> RefMut<'a, T> {
+    fn node(&self) -> &Node<T> {
+        // Safe: RefMut can only be created by Tree, which validates the Id.
+        unsafe { self.tree.vec.get_unchecked(self.id.index) }
+    }
+
+    fn node_mut(&mut self) -> &mut Node<T> {
+        // Safe: RefMut can only be created by Tree, which validates the Id.
+        unsafe { self.tree.vec.get_unchecked_mut(self.id.index) }
+    }
+
     /// Returns the value of the node.
     pub fn value(&mut self) -> &mut T {
-        &mut self.tree.vec[self.id.id].value
+        &mut self.node_mut().value
     }
 
     /// Returns the ID of the node.
@@ -263,48 +303,48 @@ impl<'a, T: 'a> RefMut<'a, T> {
 
     /// Returns a reference to the parent node.
     pub fn parent(self) -> Option<RefMut<'a, T>> {
-        let id = self.tree.vec[self.id.id].parent;
+        let id = self.node().parent;
         id.map(move |id| self.tree.get_mut(id))
     }
 
     /// Returns a reference to the previous sibling.
     pub fn prev_sibling(self) -> Option<RefMut<'a, T>> {
-        let id = self.tree.vec[self.id.id].prev_sibling;
+        let id = self.node().prev_sibling;
         id.map(move |id| self.tree.get_mut(id))
     }
 
     /// Returns a reference to the next sibling.
     pub fn next_sibling(self) -> Option<RefMut<'a, T>> {
-        let id = self.tree.vec[self.id.id].next_sibling;
+        let id = self.node().next_sibling;
         id.map(move |id| self.tree.get_mut(id))
     }
 
     /// Returns a reference to the first child.
     pub fn first_child(self) -> Option<RefMut<'a, T>> {
-        let children = self.tree.vec[self.id.id].children;
+        let children = self.node().children;
         children.map(move |(id, _)| self.tree.get_mut(id))
     }
 
     /// Returns a reference to the last child.
     pub fn last_child(self) -> Option<RefMut<'a, T>> {
-        let children = self.tree.vec[self.id.id].children;
+        let children = self.node().children;
         children.map(move |(_, id)| self.tree.get_mut(id))
     }
 
     /// Returns true if node has no parent.
     pub fn is_orphan(&self) -> bool {
-        self.tree.vec[self.id.id].parent.is_none()
+        self.node().parent.is_none()
     }
 
     /// Returns true if node has siblings.
     pub fn has_siblings(&self) -> bool {
-        let node = &self.tree.vec[self.id.id];
+        let node = self.node();
         node.prev_sibling.is_some() || node.next_sibling.is_some()
     }
 
     /// Returns true if node has children.
     pub fn has_children(&self) -> bool {
-        self.tree.vec[self.id.id].children.is_some()
+        self.node().children.is_some()
     }
 
     /// Appends a child node.
@@ -318,28 +358,32 @@ impl<'a, T: 'a> RefMut<'a, T> {
     ///
     /// # Panics
     ///
-    /// - Panics if the node referenced by `id` does not exist.
+    /// - Panics if `id` does not refer to a node in this tree.
     /// - Panics if the node referenced by `id` is not an orphan.
     pub fn append_node(&mut self, id: Id<T>) {
-        assert!(self.tree.vec[id.id].parent.is_none());
+        assert_eq!(self.tree.id, id.tree_id);
+        // Safe: Id created by same Tree.
+        assert!(unsafe { self.tree.vec.get_unchecked(id.index).parent.is_none() });
 
-        let last_child = self.tree.vec[self.id.id].children.map(|t| t.1);
+        // TODO: Uncheck all this.
+
+        let last_child = self.tree.vec[self.id.index].children.map(|t| t.1);
 
         // Update new child.
         {
-            let node = &mut self.tree.vec[id.id];
+            let node = &mut self.tree.vec[id.index];
             node.parent = Some(self.id);
             node.prev_sibling = last_child;
         }
 
         // Update previous last child.
         if let Some(child) = last_child {
-            let node = &mut self.tree.vec[child.id];
+            let node = &mut self.tree.vec[child.index];
             node.next_sibling = Some(id);
         }
 
         // Update parent.
-        let node = &mut self.tree.vec[self.id.id];
+        let node = &mut self.tree.vec[self.id.index];
         if let Some((first, _)) = node.children {
             node.children = Some((first, id));
         } else {
