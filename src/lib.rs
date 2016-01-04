@@ -347,3 +347,5 @@ impl<'a, T: 'a> RefMut<'a, T> {
         }
     }
 }
+
+pub mod iter;
