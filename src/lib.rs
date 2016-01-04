@@ -82,12 +82,33 @@ impl<T> PartialEq for Id<T> {
 impl<T> Eq for Id<T> { }
 
 /// A node reference.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Ref<'a, T: 'a> {
     tree: &'a Tree<T>,
     node: &'a Node<T>,
     id: Id<T>,
 }
+
+// Manual implementations that don't care about T.
+impl<'a, T: 'a> Clone for Ref<'a, T> {
+    fn clone(&self) -> Self {
+        Ref {
+            tree: self.tree,
+            node: self.node,
+            id: self.id
+        }
+    }
+}
+impl<'a, T: 'a> Copy for Ref<'a, T> { }
+impl<'a, T: 'a> PartialEq for Ref<'a, T> {
+    #[allow(trivial_casts)]
+    fn eq(&self, other: &Self) -> bool {
+        self.tree as *const _ == other.tree as *const _
+            && self.node as *const _ == other.node as *const _
+            && self.id == other.id
+    }
+}
+impl<'a, T: 'a> Eq for Ref<'a, T> { }
 
 /// A mutable node reference.
 ///
