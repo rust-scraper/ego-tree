@@ -252,7 +252,7 @@ impl<'a, T: 'a> Into<Ref<'a, T>> for RefMut<'a, T> {
 
 impl<'a, T: 'a> RefMut<'a, T> {
     /// Returns the value of the node.
-    pub fn value(&mut self) -> &T {
+    pub fn value(&mut self) -> &mut T {
         &mut self.tree.vec[self.id.id].value
     }
 
