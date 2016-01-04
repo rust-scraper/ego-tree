@@ -1,0 +1,4 @@
+[package]
+name = "id-tree"
+version = "0.0.0"
+authors = ["Curtis McEnroe <programble@gmail.com>"]
