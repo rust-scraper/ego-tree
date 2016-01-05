@@ -3,6 +3,60 @@ extern crate ego_tree;
 use ego_tree::{Tree, NodeRef};
 
 #[test]
+fn values() {
+    let mut tree = Tree::new('a');
+    {
+        let mut root = tree.root_mut();
+        root.append('b');
+        root.append('c');
+        root.append('d');
+    }
+
+    assert_eq!(
+        vec![&'a', &'b', &'c', &'d'],
+        tree.values().collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn values_mut() {
+    use std::ascii::AsciiExt;
+
+    let mut tree = Tree::new('a');
+    {
+        let mut root = tree.root_mut();
+        root.append('b');
+        root.append('c');
+        root.append('d');
+    }
+
+    for c in tree.values_mut() {
+        *c = c.to_ascii_uppercase();
+    }
+
+    assert_eq!(
+        vec![&'A', &'B', &'C', &'D'],
+        tree.values().collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn into_values() {
+    let mut tree = Tree::new('a');
+    {
+        let mut root = tree.root_mut();
+        root.append('b');
+        root.append('c');
+        root.append('d');
+    }
+
+    assert_eq!(
+        vec!['a', 'b', 'c', 'd'],
+        tree.into_values().collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn ancestors() {
     let mut tree = Tree::new('a');
     let b = tree.root_mut().append('b');
