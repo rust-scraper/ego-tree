@@ -1,4 +1,4 @@
-//! # ID Tree
+//! # Ego Tree
 //!
 //! A tree in which nodes are stored in a `Vec` and links are represented as IDs, which are indexes
 //! into the `Vec`.

@@ -1,6 +1,6 @@
-extern crate id_tree;
+extern crate ego_tree;
 
-use id_tree::{Tree, Ref};
+use ego_tree::{Tree, Ref};
 
 #[test]
 fn ancestors() {
