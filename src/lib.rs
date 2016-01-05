@@ -1,22 +1,19 @@
-//! # Ego Tree
+//! Vec-backed mutable tree.
 //!
-//! A tree in which nodes are stored in a `Vec` and links are represented as IDs, which are indexes
-//! into the `Vec`.
+//! # Behaviour
 //!
-//! Exhibits these properties:
-//!
-//! - Each node has zero or more ordered children.
-//! - Each node has at most one parent.
-//! - Access to a node's parent, next sibling, previous sibling, first child and last child occurs
-//!   in O(1) time.
-//! - Orphan nodes (without a parent or siblings) are permitted to exist.
-//! - IDs can be decoupled from the lifetime of the tree.
-//! - Individual nodes cannot be dropped, only detached from the tree. All nodes are dropped when
-//!   the tree is dropped.
+//! - Nodes have zero or more ordered children.
+//! - Nodes have at most one parent, i.e. orphan nodes are valid.
+//! - Individual nodes are not dropped until the tree is dropped.
+//! - A node's parent, next sibling, previous sibling, first child and last child can be accessed
+//!   in constant time.
+//! - Node IDs act as weak references, i.e. they are not tied to the lifetime of the tree.
 //!
 //! # Examples
 //!
-//! TODO
+//! ```
+//! // TODO
+//! ```
 
 #![warn(
     missing_docs,
@@ -34,7 +31,13 @@
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
-/// A tree.
+/// A Vec-backed tree.
+///
+/// Nodes are allocated in a `Vec` which is only ever pushed to. `NodeId` is an opaque index into
+/// the `Vec`.
+///
+/// Each `Tree` has a unique ID which is also given to each `NodeId` it creates. This is used to
+/// bounds check a `NodeId`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tree<T> {
     id: usize,
@@ -51,6 +54,11 @@ struct Node<T> {
 }
 
 /// A node ID.
+///
+/// `NodeId` acts as a weak reference which is not tied to the lifetime of the `Tree` that created
+/// it.
+///
+/// With the original `Tree`, a `NodeId` can be used to obtain a `NodeRef` or `NodeMut`.
 #[derive(Debug)]
 pub struct NodeId<T> {
     tree_id: usize,
