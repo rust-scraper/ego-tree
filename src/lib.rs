@@ -230,12 +230,6 @@ impl<T> Tree<T> {
     }
 }
 
-impl<T: Default> Default for Tree<T> {
-    fn default() -> Self {
-        Tree::new(T::default())
-    }
-}
-
 impl<'a, T: 'a> Ref<'a, T> {
     /// Returns the value of the node.
     pub fn value(&self) -> &T {
@@ -285,16 +279,6 @@ impl<'a, T: 'a> Ref<'a, T> {
     /// Returns true if node has children.
     pub fn has_children(&self) -> bool {
         self.node.children.is_some()
-    }
-}
-
-impl<'a, T: 'a> Into<Ref<'a, T>> for RefMut<'a, T> {
-    fn into(self) -> Ref<'a, T> {
-        Ref {
-            tree: self.tree,
-            node: self.tree.get_node_unchecked(self.id),
-            id: self.id,
-        }
     }
 }
 
@@ -404,5 +388,8 @@ impl<'a, T: 'a> RefMut<'a, T> {
         }
     }
 }
+
+// Trivial impls, to reduce clutter.
+mod impls;
 
 pub mod iter;
