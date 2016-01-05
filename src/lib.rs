@@ -35,7 +35,7 @@ use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
 // Used to ensure that an Id can only be used with the same Tree that created it.
-static mut tree_id_seq: AtomicUsize = ATOMIC_USIZE_INIT;
+static TREE_ID_SEQ: AtomicUsize = ATOMIC_USIZE_INIT;
 
 /// A tree.
 // TODO: Implement Debug manually.
@@ -144,9 +144,8 @@ impl<'a, T: 'a> Eq for RefMut<'a, T> { }
 impl<T> Tree<T> {
     /// Creates a new tree with a root node.
     pub fn new(root: T) -> Self {
-        // Safe: atomic.
         Tree {
-            id: unsafe { tree_id_seq.fetch_add(1, Ordering::Relaxed) },
+            id: TREE_ID_SEQ.fetch_add(1, Ordering::Relaxed),
             vec: vec![Node::new(root)],
         }
     }
@@ -155,9 +154,8 @@ impl<T> Tree<T> {
     pub fn with_capacity(root: T, capacity: usize) -> Self {
         let mut vec = Vec::with_capacity(capacity);
         vec.push(Node::new(root));
-        // Safe: atomic.
         Tree {
-            id: unsafe { tree_id_seq.fetch_add(1, Ordering::Relaxed) },
+            id: TREE_ID_SEQ.fetch_add(1, Ordering::Relaxed),
             vec: vec,
         }
     }
