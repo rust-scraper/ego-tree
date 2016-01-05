@@ -34,11 +34,7 @@
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
-// Used to ensure that an Id can only be used with the same Tree that created it.
-static TREE_ID_SEQ: AtomicUsize = ATOMIC_USIZE_INIT;
-
 /// A tree.
-// TODO: Implement Debug manually.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tree<T> {
     id: usize,
@@ -47,12 +43,45 @@ pub struct Tree<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Node<T> {
-    parent: Option<Id<T>>,
-    prev_sibling: Option<Id<T>>,
-    next_sibling: Option<Id<T>>,
-    children: Option<(Id<T>, Id<T>)>,
+    parent: Option<NodeId<T>>,
+    prev_sibling: Option<NodeId<T>>,
+    next_sibling: Option<NodeId<T>>,
+    children: Option<(NodeId<T>, NodeId<T>)>,
     value: T,
 }
+
+/// A node ID.
+#[derive(Debug)]
+pub struct NodeId<T> {
+    tree_id: usize,
+    index: usize,
+    data: PhantomData<T>,
+}
+
+/// A node reference.
+#[derive(Debug)]
+pub struct NodeRef<'a, T: 'a> {
+    tree: &'a Tree<T>,
+    node: &'a Node<T>,
+    id: NodeId<T>,
+}
+
+/// A node mutator.
+#[derive(Debug)]
+pub struct NodeMut<'a, T: 'a> {
+    tree: &'a mut Tree<T>,
+    id: NodeId<T>,
+}
+
+// Implementations.
+mod node_id;
+mod node_ref;
+mod node_mut;
+
+pub mod iter;
+
+// Used to ensure that an Id can only be used with the same Tree that created it.
+static TREE_ID_SEQ: AtomicUsize = ATOMIC_USIZE_INIT;
 
 impl<T> Node<T> {
     fn new(value: T) -> Self {
@@ -65,81 +94,6 @@ impl<T> Node<T> {
         }
     }
 }
-
-/// A node ID.
-#[derive(Debug)]
-pub struct Id<T> {
-    tree_id: usize,
-    index: usize,
-    data: PhantomData<T>,
-}
-
-// Manual implementations that don't care about T.
-impl<T> Clone for Id<T> {
-    fn clone(&self) -> Self {
-        Id {
-            tree_id: self.tree_id,
-            index: self.index,
-            data: PhantomData,
-        }
-    }
-}
-impl<T> Copy for Id<T> { }
-impl<T> PartialEq for Id<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.tree_id == other.tree_id && self.index == other.index
-    }
-}
-impl<T> Eq for Id<T> { }
-
-/// A node reference.
-#[derive(Debug)]
-pub struct Ref<'a, T: 'a> {
-    tree: &'a Tree<T>,
-    node: &'a Node<T>,
-    id: Id<T>,
-}
-
-// Manual implementations that don't care about T.
-impl<'a, T: 'a> Clone for Ref<'a, T> {
-    fn clone(&self) -> Self {
-        Ref {
-            tree: self.tree,
-            node: self.node,
-            id: self.id
-        }
-    }
-}
-impl<'a, T: 'a> Copy for Ref<'a, T> { }
-impl<'a, T: 'a> PartialEq for Ref<'a, T> {
-    #[allow(trivial_casts)]
-    fn eq(&self, other: &Self) -> bool {
-        self.tree as *const _ == other.tree as *const _
-            && self.node as *const _ == other.node as *const _
-            && self.id == other.id
-    }
-}
-impl<'a, T: 'a> Eq for Ref<'a, T> { }
-
-/// A mutable node reference.
-///
-/// Note that accesses to the node may be slower than `Ref`, since `RefMut` cannot directly hold a
-/// reference to the node.
-#[derive(Debug)]
-pub struct RefMut<'a, T: 'a> {
-    tree: &'a mut Tree<T>,
-    id: Id<T>,
-}
-
-// Manual implementations that don't care about T.
-impl<'a, T: 'a> PartialEq for RefMut<'a, T> {
-    #[allow(trivial_casts)]
-    fn eq(&self, other: &Self) -> bool {
-        self.tree as *const _ == other.tree as *const _
-            && self.id == other.id
-    }
-}
-impl<'a, T: 'a> Eq for RefMut<'a, T> { }
 
 impl<T> Tree<T> {
     /// Creates a new tree with a root node.
@@ -165,67 +119,67 @@ impl<T> Tree<T> {
     /// # Panics
     ///
     /// Panics if `id` does not refer to a node in this tree.
-    pub fn get(&self, id: Id<T>) -> Ref<T> {
+    pub fn get(&self, id: NodeId<T>) -> NodeRef<T> {
         assert_eq!(self.id, id.tree_id);
         self.get_unchecked(id)
     }
 
-    /// Returns a mutable reference to the specified node.
+    /// Returns a mutator for the specified node.
     ///
     /// # Panics
     ///
     /// Panics if `id` does not refer to a node in this tree.
-    pub fn get_mut(&mut self, id: Id<T>) -> RefMut<T> {
+    pub fn get_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
         assert_eq!(self.id, id.tree_id);
         self.get_unchecked_mut(id)
     }
 
     /// Returns a reference to the root node.
-    pub fn root(&self) -> Ref<T> {
-        self.get_unchecked(self.id_for(0))
+    pub fn root(&self) -> NodeRef<T> {
+        self.get_unchecked(self.node_id(0))
     }
 
     /// Returns a mutable reference to the root node.
-    pub fn root_mut(&mut self) -> RefMut<T> {
-        let id = self.id_for(0);
+    pub fn root_mut(&mut self) -> NodeMut<T> {
+        let id = self.node_id(0);
         self.get_unchecked_mut(id)
     }
 
     /// Creates an orphan node.
-    pub fn orphan(&mut self, value: T) -> RefMut<T> {
-        let id = self.id_for(self.vec.len());
+    pub fn orphan(&mut self, value: T) -> NodeMut<T> {
+        let id = self.node_id(self.vec.len());
         self.vec.push(Node::new(value));
         self.get_unchecked_mut(id)
     }
 
-    fn id_for(&self, index: usize) -> Id<T> {
-        Id {
+    fn node_id(&self, index: usize) -> NodeId<T> {
+        NodeId {
             tree_id: self.id,
             index: index,
             data: PhantomData,
         }
     }
 
-    fn get_unchecked(&self, id: Id<T>) -> Ref<T> {
-        Ref {
+    fn get_unchecked(&self, id: NodeId<T>) -> NodeRef<T> {
+        NodeRef {
             tree: self,
             node: self.get_node_unchecked(id),
             id: id,
         }
     }
 
-    fn get_unchecked_mut(&mut self, id: Id<T>) -> RefMut<T> {
-        RefMut {
+    fn get_unchecked_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
+        NodeMut {
             tree: self,
             id: id,
         }
     }
 
-    fn get_node_unchecked(&self, id: Id<T>) -> &Node<T> {
+    fn get_node_unchecked(&self, id: NodeId<T>) -> &Node<T> {
         unsafe { self.vec.get_unchecked(id.index) }
     }
 
-    fn get_node_unchecked_mut(&mut self, id: Id<T>) -> &mut Node<T> {
+    fn get_node_unchecked_mut(&mut self, id: NodeId<T>) -> &mut Node<T> {
         unsafe { self.vec.get_unchecked_mut(id.index) }
     }
 }
@@ -235,174 +189,3 @@ impl<T: Default> Default for Tree<T> {
         Tree::new(T::default())
     }
 }
-
-impl<'a, T: 'a> Ref<'a, T> {
-    /// Returns the value of the node.
-    pub fn value(&self) -> &T {
-        &self.node.value
-    }
-
-    /// Returns the ID of the node.
-    pub fn id(&self) -> Id<T> {
-        self.id
-    }
-
-    /// Returns a reference to the parent node.
-    pub fn parent(&self) -> Option<Ref<'a, T>> {
-        self.node.parent.map(|id| self.tree.get_unchecked(id))
-    }
-
-    /// Returns a reference to the previous sibling.
-    pub fn prev_sibling(&self) -> Option<Ref<'a, T>> {
-        self.node.prev_sibling.map(|id| self.tree.get_unchecked(id))
-    }
-
-    /// Returns a reference to the next sibling.
-    pub fn next_sibling(&self) -> Option<Ref<'a, T>> {
-        self.node.next_sibling.map(|id| self.tree.get_unchecked(id))
-    }
-
-    /// Returns a reference to the first child.
-    pub fn first_child(&self) -> Option<Ref<'a, T>> {
-        self.node.children.map(|(id, _)| self.tree.get_unchecked(id))
-    }
-
-    /// Returns a reference to the last child.
-    pub fn last_child(&self) -> Option<Ref<'a, T>> {
-        self.node.children.map(|(_, id)| self.tree.get_unchecked(id))
-    }
-
-    /// Returns true if node has no parent.
-    pub fn is_orphan(&self) -> bool {
-        self.node.parent.is_none()
-    }
-
-    /// Returns true if node has siblings.
-    pub fn has_siblings(&self) -> bool {
-        self.node.prev_sibling.is_some() || self.node.next_sibling.is_some()
-    }
-
-    /// Returns true if node has children.
-    pub fn has_children(&self) -> bool {
-        self.node.children.is_some()
-    }
-}
-
-impl<'a, T: 'a> Into<Ref<'a, T>> for RefMut<'a, T> {
-    fn into(self) -> Ref<'a, T> {
-        Ref {
-            tree: self.tree,
-            node: self.tree.get_node_unchecked(self.id),
-            id: self.id,
-        }
-    }
-}
-
-impl<'a, T: 'a> RefMut<'a, T> {
-    fn node(&self) -> &Node<T> {
-        self.tree.get_node_unchecked(self.id)
-    }
-
-    fn node_mut(&mut self) -> &mut Node<T> {
-        self.tree.get_node_unchecked_mut(self.id)
-    }
-
-    /// Returns the value of the node.
-    pub fn value(&mut self) -> &mut T {
-        &mut self.node_mut().value
-    }
-
-    /// Returns the ID of the node.
-    pub fn id(&self) -> Id<T> {
-        self.id
-    }
-
-    /// Returns a reference to the parent node.
-    pub fn parent(self) -> Option<RefMut<'a, T>> {
-        let id = self.node().parent;
-        id.map(move |id| self.tree.get_unchecked_mut(id))
-    }
-
-    /// Returns a reference to the previous sibling.
-    pub fn prev_sibling(self) -> Option<RefMut<'a, T>> {
-        let id = self.node().prev_sibling;
-        id.map(move |id| self.tree.get_unchecked_mut(id))
-    }
-
-    /// Returns a reference to the next sibling.
-    pub fn next_sibling(self) -> Option<RefMut<'a, T>> {
-        let id = self.node().next_sibling;
-        id.map(move |id| self.tree.get_unchecked_mut(id))
-    }
-
-    /// Returns a reference to the first child.
-    pub fn first_child(self) -> Option<RefMut<'a, T>> {
-        let children = self.node().children;
-        children.map(move |(id, _)| self.tree.get_unchecked_mut(id))
-    }
-
-    /// Returns a reference to the last child.
-    pub fn last_child(self) -> Option<RefMut<'a, T>> {
-        let children = self.node().children;
-        children.map(move |(_, id)| self.tree.get_unchecked_mut(id))
-    }
-
-    /// Returns true if node has no parent.
-    pub fn is_orphan(&self) -> bool {
-        self.node().parent.is_none()
-    }
-
-    /// Returns true if node has siblings.
-    pub fn has_siblings(&self) -> bool {
-        let node = self.node();
-        node.prev_sibling.is_some() || node.next_sibling.is_some()
-    }
-
-    /// Returns true if node has children.
-    pub fn has_children(&self) -> bool {
-        self.node().children.is_some()
-    }
-
-    /// Appends a child node.
-    pub fn append(&mut self, value: T) -> Id<T> {
-        let id = self.tree.orphan(value).id();
-        self.append_node(id);
-        id
-    }
-
-    /// Appends an orphan node to this node's children.
-    ///
-    /// # Panics
-    ///
-    /// - Panics if `id` does not refer to a node in this tree.
-    /// - Panics if the node referenced by `id` is not an orphan.
-    pub fn append_node(&mut self, id: Id<T>) {
-        assert_eq!(self.tree.id, id.tree_id);
-        assert!(self.tree.get_node_unchecked(id).parent.is_none());
-
-        let last_child = self.tree.get_node_unchecked(self.id).children.map(|t| t.1);
-
-        // Update new child.
-        {
-            let node = self.tree.get_node_unchecked_mut(id);
-            node.parent = Some(self.id);
-            node.prev_sibling = last_child;
-        }
-
-        // Update previous last child.
-        if let Some(child) = last_child {
-            let node = self.tree.get_node_unchecked_mut(child);
-            node.next_sibling = Some(id);
-        }
-
-        // Update parent.
-        let node = self.tree.get_node_unchecked_mut(self.id);
-        if let Some((first, _)) = node.children {
-            node.children = Some((first, id));
-        } else {
-            node.children = Some((id, id));
-        }
-    }
-}
-
-pub mod iter;

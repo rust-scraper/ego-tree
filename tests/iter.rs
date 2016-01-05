@@ -1,6 +1,6 @@
 extern crate ego_tree;
 
-use ego_tree::{Tree, Ref};
+use ego_tree::{Tree, NodeRef};
 
 #[test]
 fn ancestors() {
@@ -11,9 +11,9 @@ fn ancestors() {
 
     let d = tree.get(d);
     let mut iter = d.ancestors();
-    assert_eq!(Some(&'d'), iter.next().as_ref().map(Ref::value));
-    assert_eq!(Some(&'c'), iter.next().as_ref().map(Ref::value));
-    assert_eq!(Some(&'b'), iter.next().as_ref().map(Ref::value));
-    assert_eq!(Some(&'a'), iter.next().as_ref().map(Ref::value));
+    assert_eq!(Some(&'d'), iter.next().as_ref().map(NodeRef::value));
+    assert_eq!(Some(&'c'), iter.next().as_ref().map(NodeRef::value));
+    assert_eq!(Some(&'b'), iter.next().as_ref().map(NodeRef::value));
+    assert_eq!(Some(&'a'), iter.next().as_ref().map(NodeRef::value));
     assert_eq!(None, iter.next());
 }
