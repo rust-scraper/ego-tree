@@ -122,6 +122,17 @@ impl<T> Tree<T> {
         }
     }
 
+    /// Returns a reference to the root node.
+    pub fn root(&self) -> NodeRef<T> {
+        self.get_unchecked(self.node_id(0))
+    }
+
+    /// Returns a mutable reference to the root node.
+    pub fn root_mut(&mut self) -> NodeMut<T> {
+        let id = self.node_id(0);
+        self.get_unchecked_mut(id)
+    }
+
     /// Returns a reference to the specified node.
     ///
     /// # Panics
@@ -139,17 +150,6 @@ impl<T> Tree<T> {
     /// Panics if `id` does not refer to a node in this tree.
     pub fn get_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
         assert_eq!(self.id, id.tree_id);
-        self.get_unchecked_mut(id)
-    }
-
-    /// Returns a reference to the root node.
-    pub fn root(&self) -> NodeRef<T> {
-        self.get_unchecked(self.node_id(0))
-    }
-
-    /// Returns a mutable reference to the root node.
-    pub fn root_mut(&mut self) -> NodeMut<T> {
-        let id = self.node_id(0);
         self.get_unchecked_mut(id)
     }
 
