@@ -1,6 +1,65 @@
 //! Tree iterators.
 
-use super::NodeRef;
+use std::{slice, vec};
+
+use super::{Tree, Node, NodeRef};
+
+/// Iterator over node values.
+#[derive(Clone)]
+pub struct Values<'a, T: 'a> {
+    inner: slice::Iter<'a, Node<T>>,
+}
+
+impl<'a, T: 'a> Iterator for Values<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        self.inner.next().map(|n| &n.value)
+    }
+}
+
+/// Mutable iterator over node values.
+pub struct ValuesMut<'a, T: 'a> {
+    inner: slice::IterMut<'a, Node<T>>,
+}
+
+impl<'a, T: 'a> Iterator for ValuesMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<&'a mut T> {
+        self.inner.next().map(|n| &mut n.value)
+    }
+}
+
+/// Iterator that moves node values out of a tree.
+pub struct IntoValues<T> {
+    inner: vec::IntoIter<Node<T>>,
+}
+
+impl<T> Iterator for IntoValues<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        self.inner.next().map(|n| n.value)
+    }
+}
+
+impl<T> Tree<T> {
+    /// Returns an iterator over node values in creation order.
+    pub fn values(&self) -> Values<T> {
+        Values { inner: self.vec.iter() }
+    }
+
+    /// Returns a mutable iterator over node values in creation order.
+    pub fn values_mut(&mut self) -> ValuesMut<T> {
+        ValuesMut { inner: self.vec.iter_mut() }
+    }
+
+    /// Returns an iterator that moves node values out of the tree in creation order.
+    pub fn into_values(self) -> IntoValues<T> {
+        IntoValues { inner: self.vec.into_iter() }
+    }
+}
 
 /// Iterator over node ancestors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
