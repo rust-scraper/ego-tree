@@ -118,6 +118,43 @@ axis_iterators! {
     LastChildren(NodeRef::last_child);
 }
 
+/// Iterator over node children.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Children<'a, T: 'a> {
+    front: Option<NodeRef<'a, T>>,
+    back: Option<NodeRef<'a, T>>,
+}
+
+impl<'a, T: 'a> Iterator for Children<'a, T> {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        if self.front == self.back {
+            let node = self.front.take();
+            self.back = None;
+            node
+        } else {
+            let node = self.front.take();
+            self.front = node.as_ref().and_then(NodeRef::next_sibling);
+            node
+        }
+    }
+}
+
+impl<'a, T: 'a> DoubleEndedIterator for Children<'a, T> {
+    fn next_back(&mut self) -> Option<NodeRef<'a, T>> {
+        if self.front == self.back {
+            let node = self.back.take();
+            self.front = None;
+            node
+        } else {
+            let node = self.back.take();
+            self.back = node.as_ref().and_then(NodeRef::prev_sibling);
+            node
+        }
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<'a, T> {
@@ -132,6 +169,14 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's next siblings.
     pub fn next_siblings(&self) -> NextSiblings<'a, T> {
         NextSiblings { node: self.next_sibling() }
+    }
+
+    /// Returns an iterator over this node's children.
+    pub fn children(&self) -> Children<'a, T> {
+        Children {
+            front: self.first_child(),
+            back: self.last_child(),
+        }
     }
 
     /// Returns an iterator over this node's first children.
