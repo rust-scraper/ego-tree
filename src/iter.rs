@@ -95,9 +95,51 @@ impl<'a, T: 'a> Iterator for Ancestors<'a, T> {
     }
 }
 
+/// Iterator over node previous siblings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PrevSiblings<'a, T: 'a> {
+    node: Option<NodeRef<'a, T>>,
+}
+
+impl<'a, T: 'a> Iterator for PrevSiblings<'a, T> {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        let node = self.node.take();
+        self.node = node.as_ref().and_then(NodeRef::prev_sibling);
+        node
+    }
+}
+
+/// Iterator over node next siblings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NextSiblings<'a, T: 'a> {
+    node: Option<NodeRef<'a, T>>,
+}
+
+impl<'a, T: 'a> Iterator for NextSiblings<'a, T> {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        let node = self.node.take();
+        self.node = node.as_ref().and_then(NodeRef::next_sibling);
+        node
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<T> {
         Ancestors { node: self.parent() }
+    }
+
+    /// Returns an iterator over this node's previous siblings.
+    pub fn prev_siblings(&self) -> PrevSiblings<T> {
+        PrevSiblings { node: self.prev_sibling() }
+    }
+
+    /// Returns an iterator over this node's next siblings.
+    pub fn next_siblings(&self) -> NextSiblings<T> {
+        NextSiblings { node: self.next_sibling() }
     }
 }
