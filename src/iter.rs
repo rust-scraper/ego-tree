@@ -129,17 +129,17 @@ impl<'a, T: 'a> Iterator for NextSiblings<'a, T> {
 
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
-    pub fn ancestors(&self) -> Ancestors<T> {
+    pub fn ancestors(&self) -> Ancestors<'a, T> {
         Ancestors { node: self.parent() }
     }
 
     /// Returns an iterator over this node's previous siblings.
-    pub fn prev_siblings(&self) -> PrevSiblings<T> {
+    pub fn prev_siblings(&self) -> PrevSiblings<'a, T> {
         PrevSiblings { node: self.prev_sibling() }
     }
 
     /// Returns an iterator over this node's next siblings.
-    pub fn next_siblings(&self) -> NextSiblings<T> {
+    pub fn next_siblings(&self) -> NextSiblings<'a, T> {
         NextSiblings { node: self.next_sibling() }
     }
 }
