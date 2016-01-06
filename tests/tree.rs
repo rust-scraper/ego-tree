@@ -52,3 +52,26 @@ fn append_1() {
     assert_eq!(None, child.first_child());
     assert_eq!(None, child.last_child());
 }
+
+#[test]
+fn append_2() {
+    let mut tree = Tree::new('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+
+    let root = tree.root();
+    assert_eq!(&'a', root.value());
+
+    let first_child = root.first_child().unwrap();
+    assert_eq!(&'b', first_child.value());
+    assert_eq!(Some(root), first_child.parent());
+    assert_eq!(None, first_child.prev_sibling());
+
+    let last_child = root.last_child().unwrap();
+    assert_eq!(&'c', last_child.value());
+    assert_eq!(Some(root), last_child.parent());
+    assert_eq!(None, last_child.next_sibling());
+
+    assert_eq!(Some(last_child), first_child.next_sibling());
+    assert_eq!(Some(first_child), last_child.prev_sibling());
+}
