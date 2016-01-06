@@ -8,32 +8,32 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 
     /// Returns the ID of the node.
     pub fn id(&self) -> NodeId<T> {
-        self.id
+        self.tree.node_id(self.index)
     }
 
     /// Returns a reference to the parent node.
     pub fn parent(&self) -> Option<NodeRef<'a, T>> {
-        self.node.parent.map(|id| self.tree.get_unchecked(id))
+        self.node.parent.map(|i| self.tree.get_unchecked(i))
     }
 
     /// Returns a reference to the previous sibling.
     pub fn prev_sibling(&self) -> Option<NodeRef<'a, T>> {
-        self.node.prev_sibling.map(|id| self.tree.get_unchecked(id))
+        self.node.prev_sibling.map(|i| self.tree.get_unchecked(i))
     }
 
     /// Returns a reference to the next sibling.
     pub fn next_sibling(&self) -> Option<NodeRef<'a, T>> {
-        self.node.next_sibling.map(|id| self.tree.get_unchecked(id))
+        self.node.next_sibling.map(|i| self.tree.get_unchecked(i))
     }
 
     /// Returns a reference to the first child.
     pub fn first_child(&self) -> Option<NodeRef<'a, T>> {
-        self.node.children.map(|(id, _)| self.tree.get_unchecked(id))
+        self.node.children.map(|(i, _)| self.tree.get_unchecked(i))
     }
 
     /// Returns a reference to the last child.
     pub fn last_child(&self) -> Option<NodeRef<'a, T>> {
-        self.node.children.map(|(_, id)| self.tree.get_unchecked(id))
+        self.node.children.map(|(_, i)| self.tree.get_unchecked(i))
     }
 
     /// Returns true if node has no parent.
@@ -58,7 +58,7 @@ impl<'a, T: 'a> Clone for NodeRef<'a, T> {
         NodeRef {
             tree: self.tree,
             node: self.node,
-            id: self.id,
+            index: self.index,
         }
     }
 }
@@ -69,6 +69,6 @@ impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.tree as *const _ == other.tree as *const _
             && self.node as *const _ == other.node as *const _
-            && self.id == other.id
+            && self.index == other.index
     }
 }

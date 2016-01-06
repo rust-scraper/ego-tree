@@ -46,10 +46,10 @@ pub struct Tree<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Node<T> {
-    parent: Option<NodeId<T>>,
-    prev_sibling: Option<NodeId<T>>,
-    next_sibling: Option<NodeId<T>>,
-    children: Option<(NodeId<T>, NodeId<T>)>,
+    parent: Option<usize>,
+    prev_sibling: Option<usize>,
+    next_sibling: Option<usize>,
+    children: Option<(usize, usize)>,
     value: T,
 }
 
@@ -71,14 +71,14 @@ pub struct NodeId<T> {
 pub struct NodeRef<'a, T: 'a> {
     tree: &'a Tree<T>,
     node: &'a Node<T>,
-    id: NodeId<T>,
+    index: usize,
 }
 
 /// A node mutator.
 #[derive(Debug)]
 pub struct NodeMut<'a, T: 'a> {
     tree: &'a mut Tree<T>,
-    id: NodeId<T>,
+    index: usize,
 }
 
 // Implementations.
@@ -124,13 +124,12 @@ impl<T> Tree<T> {
 
     /// Returns a reference to the root node.
     pub fn root(&self) -> NodeRef<T> {
-        self.get_unchecked(self.node_id(0))
+        self.get_unchecked(0)
     }
 
     /// Returns a mutable reference to the root node.
     pub fn root_mut(&mut self) -> NodeMut<T> {
-        let id = self.node_id(0);
-        self.get_unchecked_mut(id)
+        self.get_unchecked_mut(0)
     }
 
     /// Returns a reference to the specified node.
@@ -139,8 +138,7 @@ impl<T> Tree<T> {
     ///
     /// Panics if `id` does not refer to a node in this tree.
     pub fn get(&self, id: NodeId<T>) -> NodeRef<T> {
-        assert_eq!(self.id, id.tree_id);
-        self.get_unchecked(id)
+        self.get_unchecked(self.validate_id(id))
     }
 
     /// Returns a mutator for the specified node.
@@ -149,15 +147,20 @@ impl<T> Tree<T> {
     ///
     /// Panics if `id` does not refer to a node in this tree.
     pub fn get_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        assert_eq!(self.id, id.tree_id);
-        self.get_unchecked_mut(id)
+        let index = self.validate_id(id);
+        self.get_unchecked_mut(index)
     }
 
     /// Creates an orphan node.
     pub fn orphan(&mut self, value: T) -> NodeMut<T> {
-        let id = self.node_id(self.vec.len());
+        let id = self.vec.len();
         self.vec.push(Node::new(value));
         self.get_unchecked_mut(id)
+    }
+
+    fn validate_id(&self, id: NodeId<T>) -> usize {
+        assert_eq!(self.id, id.tree_id);
+        id.index
     }
 
     fn node_id(&self, index: usize) -> NodeId<T> {
@@ -168,27 +171,27 @@ impl<T> Tree<T> {
         }
     }
 
-    fn get_unchecked(&self, id: NodeId<T>) -> NodeRef<T> {
+    fn get_unchecked(&self, index: usize) -> NodeRef<T> {
         NodeRef {
             tree: self,
-            node: self.get_node_unchecked(id),
-            id: id,
+            node: self.get_node_unchecked(index),
+            index: index,
         }
     }
 
-    fn get_unchecked_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
+    fn get_unchecked_mut(&mut self, index: usize) -> NodeMut<T> {
         NodeMut {
             tree: self,
-            id: id,
+            index: index,
         }
     }
 
-    fn get_node_unchecked(&self, id: NodeId<T>) -> &Node<T> {
-        unsafe { self.vec.get_unchecked(id.index) }
+    fn get_node_unchecked(&self, index: usize) -> &Node<T> {
+        unsafe { self.vec.get_unchecked(index) }
     }
 
-    fn get_node_unchecked_mut(&mut self, id: NodeId<T>) -> &mut Node<T> {
-        unsafe { self.vec.get_unchecked_mut(id.index) }
+    fn get_node_unchecked_mut(&mut self, index: usize) -> &mut Node<T> {
+        unsafe { self.vec.get_unchecked_mut(index) }
     }
 }
 
