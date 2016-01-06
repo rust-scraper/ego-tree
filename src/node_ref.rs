@@ -2,7 +2,7 @@ use super::{NodeRef, NodeId};
 
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns the value of the node.
-    pub fn value(&self) -> &T {
+    pub fn value(&self) -> &'a T {
         &self.node.value
     }
 
