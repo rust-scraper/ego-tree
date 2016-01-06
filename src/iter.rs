@@ -2,7 +2,7 @@
 
 use std::{fmt, slice, vec};
 
-use super::{Tree, Node, NodeRef, NodeMut};
+use super::{Tree, Node, NodeRef};
 
 /// Iterator over node values.
 #[derive(Clone)]
@@ -96,8 +96,8 @@ impl<'a, T: 'a> Iterator for Ancestors<'a, T> {
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
-    /// Returns an iterator over this node and its ancestors.
+    /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<T> {
-        Ancestors { node: Some(self.clone()) }
+        Ancestors { node: self.parent() }
     }
 }
