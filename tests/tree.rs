@@ -75,3 +75,23 @@ fn append_2() {
     assert_eq!(Some(last_child), first_child.next_sibling());
     assert_eq!(Some(first_child), last_child.prev_sibling());
 }
+
+#[test]
+fn append_3() {
+    let mut tree = Tree::new('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+    tree.root_mut().append('d');
+
+    let b = tree.root().first_child().unwrap();
+    let c = b.next_sibling().unwrap();
+    let d = tree.root().last_child().unwrap();
+
+    assert_eq!(&'b', b.value());
+    assert_eq!(&'c', c.value());
+    assert_eq!(&'d', d.value());
+
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(Some(d), c.next_sibling());
+    assert_eq!(Some(c), d.prev_sibling());
+}
