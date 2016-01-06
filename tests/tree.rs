@@ -23,6 +23,19 @@ fn get() {
 }
 
 #[test]
+fn orphan() {
+    let mut tree = Tree::new('a');
+    tree.orphan('b');
+    let root = tree.root();
+    assert_eq!(&'a', root.value());
+    assert_eq!(None, root.parent());
+    assert_eq!(None, root.prev_sibling());
+    assert_eq!(None, root.next_sibling());
+    assert_eq!(None, root.first_child());
+    assert_eq!(None, root.last_child());
+}
+
+#[test]
 fn append_1() {
     let mut tree = Tree::new('a');
     tree.root_mut().append('b');
