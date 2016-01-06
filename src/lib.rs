@@ -38,7 +38,7 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 ///
 /// Each `Tree` has a unique ID which is also given to each `NodeId` it creates. This is used to
 /// bounds check a `NodeId`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Tree<T> {
     id: usize,
     vec: Vec<Node<T>>,
@@ -90,6 +90,7 @@ pub mod iter;
 
 // Used to ensure that an Id can only be used with the same Tree that created it.
 static TREE_ID_SEQ: AtomicUsize = ATOMIC_USIZE_INIT;
+fn tree_id_seq_next() -> usize { TREE_ID_SEQ.fetch_add(1, Ordering::Relaxed) }
 
 impl<T> Node<T> {
     fn new(value: T) -> Self {
@@ -107,7 +108,7 @@ impl<T> Tree<T> {
     /// Creates a new tree with a root node.
     pub fn new(root: T) -> Self {
         Tree {
-            id: TREE_ID_SEQ.fetch_add(1, Ordering::Relaxed),
+            id: tree_id_seq_next(),
             vec: vec![Node::new(root)],
         }
     }
@@ -117,7 +118,7 @@ impl<T> Tree<T> {
         let mut vec = Vec::with_capacity(capacity);
         vec.push(Node::new(root));
         Tree {
-            id: TREE_ID_SEQ.fetch_add(1, Ordering::Relaxed),
+            id: tree_id_seq_next(),
             vec: vec,
         }
     }
@@ -198,5 +199,21 @@ impl<T> Tree<T> {
 impl<T: Default> Default for Tree<T> {
     fn default() -> Self {
         Tree::new(T::default())
+    }
+}
+
+impl<T: Clone> Clone for Tree<T> {
+    fn clone(&self) -> Self {
+        Tree {
+            id: tree_id_seq_next(),
+            vec: self.vec.clone(),
+        }
+    }
+}
+
+impl<T: Eq> Eq for Tree<T> { }
+impl<T: PartialEq> PartialEq for Tree<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.vec == other.vec
     }
 }
