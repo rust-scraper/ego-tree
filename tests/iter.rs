@@ -1,6 +1,6 @@
 extern crate ego_tree;
 
-use ego_tree::{Tree, NodeRef};
+use ego_tree::Tree;
 
 #[test]
 fn values() {
@@ -64,9 +64,44 @@ fn ancestors() {
     let d = tree.get_mut(c).append('d');
 
     let d = tree.get(d);
-    let mut iter = d.ancestors();
-    assert_eq!(Some(&'c'), iter.next().as_ref().map(NodeRef::value));
-    assert_eq!(Some(&'b'), iter.next().as_ref().map(NodeRef::value));
-    assert_eq!(Some(&'a'), iter.next().as_ref().map(NodeRef::value));
-    assert_eq!(None, iter.next());
+    assert_eq!(
+        vec![&'c', &'b', &'a'],
+        d.ancestors().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn prev_siblings() {
+    let mut tree = Tree::new('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+    tree.root_mut().append('d');
+
+    assert_eq!(
+        vec![&'c', &'b'],
+        tree.root()
+            .last_child()
+            .unwrap()
+            .prev_siblings()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn next_siblings() {
+    let mut tree = Tree::new('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+    tree.root_mut().append('d');
+
+    assert_eq!(
+        vec![&'c', &'d'],
+        tree.root()
+            .first_child()
+            .unwrap()
+            .next_siblings()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
+    );
 }
