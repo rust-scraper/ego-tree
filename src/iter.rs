@@ -1,8 +1,8 @@
 //! Tree iterators.
 
-use std::{slice, vec};
+use std::{fmt, slice, vec};
 
-use super::{Tree, Node, NodeRef};
+use super::{Tree, Node, NodeRef, NodeMut};
 
 /// Iterator over node values.
 #[derive(Clone)]
@@ -15,6 +15,12 @@ impl<'a, T: 'a> Iterator for Values<'a, T> {
 
     fn next(&mut self) -> Option<&'a T> {
         self.inner.next().map(|n| &n.value)
+    }
+}
+
+impl<'a, T: 'a> fmt::Debug for Values<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Values").finish()
     }
 }
 
@@ -31,6 +37,12 @@ impl<'a, T: 'a> Iterator for ValuesMut<'a, T> {
     }
 }
 
+impl<'a, T: 'a> fmt::Debug for ValuesMut<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("ValuesMut").finish()
+    }
+}
+
 /// Iterator that moves node values out of a tree.
 pub struct IntoValues<T> {
     inner: vec::IntoIter<Node<T>>,
@@ -41,6 +53,12 @@ impl<T> Iterator for IntoValues<T> {
 
     fn next(&mut self) -> Option<T> {
         self.inner.next().map(|n| n.value)
+    }
+}
+
+impl<T> fmt::Debug for IntoValues<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("IntoValues").finish()
     }
 }
 
