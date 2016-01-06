@@ -79,52 +79,37 @@ impl<T> Tree<T> {
     }
 }
 
-/// Iterator over node ancestors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Ancestors<'a, T: 'a> {
-    node: Option<NodeRef<'a, T>>,
-}
+macro_rules! axis_iterators {
+    ($(#[$m:meta] $i:ident($f:path);)*) => {
+        $(
+            #[$m]
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            pub struct $i<'a, T: 'a> {
+                node: Option<NodeRef<'a, T>>,
+            }
 
-impl<'a, T: 'a> Iterator for Ancestors<'a, T> {
-    type Item = NodeRef<'a, T>;
+            impl<'a, T: 'a> Iterator for $i<'a, T> {
+                type Item = NodeRef<'a, T>;
 
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
-        let node = self.node.take();
-        self.node = node.as_ref().and_then(NodeRef::parent);
-        node
+                fn next(&mut self) -> Option<NodeRef<'a, T>> {
+                    let node = self.node.take();
+                    self.node = node.as_ref().and_then($f);
+                    node
+                }
+            }
+        )*
     }
 }
 
-/// Iterator over node previous siblings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PrevSiblings<'a, T: 'a> {
-    node: Option<NodeRef<'a, T>>,
-}
+axis_iterators! {
+    #[doc = "Iterator over node ancestors."]
+    Ancestors(NodeRef::parent);
 
-impl<'a, T: 'a> Iterator for PrevSiblings<'a, T> {
-    type Item = NodeRef<'a, T>;
+    #[doc = "Iterator over node previous siblings."]
+    PrevSiblings(NodeRef::prev_sibling);
 
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
-        let node = self.node.take();
-        self.node = node.as_ref().and_then(NodeRef::prev_sibling);
-        node
-    }
-}
-
-/// Iterator over node next siblings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NextSiblings<'a, T: 'a> {
-    node: Option<NodeRef<'a, T>>,
-}
-
-impl<'a, T: 'a> Iterator for NextSiblings<'a, T> {
-    type Item = NodeRef<'a, T>;
-
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
-        let node = self.node.take();
-        self.node = node.as_ref().and_then(NodeRef::next_sibling);
-        node
-    }
+    #[doc = "Iterator over node next siblings."]
+    NextSiblings(NodeRef::next_sibling);
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
