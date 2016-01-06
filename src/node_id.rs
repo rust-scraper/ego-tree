@@ -8,7 +8,7 @@ impl<T> Clone for NodeId<T> {
         NodeId {
             tree_id: self.tree_id,
             index: self.index,
-            data: PhantomData,
+            marker: PhantomData,
         }
     }
 }

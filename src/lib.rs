@@ -63,7 +63,7 @@ struct Node<T> {
 pub struct NodeId<T> {
     tree_id: usize,
     index: usize,
-    data: PhantomData<T>,
+    marker: PhantomData<T>,
 }
 
 /// A node reference.
@@ -164,7 +164,7 @@ impl<T> Tree<T> {
         NodeId {
             tree_id: self.id,
             index: index,
-            data: PhantomData,
+            marker: PhantomData,
         }
     }
 
