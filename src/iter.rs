@@ -110,6 +110,12 @@ axis_iterators! {
 
     #[doc = "Iterator over node next siblings."]
     NextSiblings(NodeRef::next_sibling);
+
+    #[doc = "Iterator over node first children."]
+    FirstChildren(NodeRef::first_child);
+
+    #[doc = "Iterator over node last children."]
+    LastChildren(NodeRef::last_child);
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
@@ -126,5 +132,15 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's next siblings.
     pub fn next_siblings(&self) -> NextSiblings<'a, T> {
         NextSiblings { node: self.next_sibling() }
+    }
+
+    /// Returns an iterator over this node's first children.
+    pub fn first_children(&self) -> FirstChildren<'a, T> {
+        FirstChildren { node: self.first_child() }
+    }
+
+    /// Returns an iterator over this node's last children.
+    pub fn last_children(&self) -> LastChildren<'a, T> {
+        LastChildren { node: self.last_child() }
     }
 }
