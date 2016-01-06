@@ -105,3 +105,31 @@ fn next_siblings() {
             .collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn first_children() {
+    let mut tree = Tree::new('a');
+    let b = tree.root_mut().append('b');
+    tree.root_mut().append('c');
+    tree.get_mut(b).append('d');
+    tree.get_mut(b).append('e');
+
+    assert_eq!(
+        vec![&'b', &'d'],
+        tree.root().first_children().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn last_children() {
+    let mut tree = Tree::new('a');
+    tree.root_mut().append('b');
+    let c = tree.root_mut().append('c');
+    tree.get_mut(c).append('d');
+    tree.get_mut(c).append('e');
+
+    assert_eq!(
+        vec![&'c', &'e'],
+        tree.root().last_children().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
