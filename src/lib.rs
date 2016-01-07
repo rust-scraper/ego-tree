@@ -220,46 +220,47 @@ impl<T: PartialEq> PartialEq for Tree<T> {
 
 #[macro_export]
 macro_rules! tree {
-    // No children.
-    (@ $node_mut:ident { }) => { };
+    (@ $m:ident { }) => { };
 
-    // Ignore commas between children.
-    (@ $node_mut:ident { , $($tail:tt)* }) => {{
-        tree!(@ $node_mut { $($tail)* });
+    // Last leaf.
+    (@ $m:ident { $value:expr }) => {{
+        $m.append($value);
     }};
 
-    // Single child.
-    (@ $node_mut:ident { $value:expr }) => {{
-        $node_mut.append($value);
+    // Leaf.
+    (@ $m:ident { $value:expr, $($tail:tt)* }) => {{
+        $m.append($value);
+        tree!(@ $m { $($tail)* });
     }};
 
-    // Leaf child.
-    (@ $node_mut:ident { $value:expr, $($tail:tt)* }) => {{
-        $node_mut.append($value);
-        tree!(@ $node_mut { $($tail)* });
+    // Last node with children.
+    (@ $m:ident { $value:expr => $children:tt }) => {{
+        $m.append($value);
+        $m = $m.last_child().unwrap();
+        tree!(@ $m $children);
+        $m = $m.parent().unwrap();
     }};
 
-    // Child with children.
-    (@ $node_mut:ident { $value:expr => $children:tt $($tail:tt)* }) => {{
-        $node_mut.append($value);
-        $node_mut = $node_mut.last_child().unwrap();
-        tree!(@ $node_mut $children);
-        $node_mut = $node_mut.parent().unwrap();
-        tree!(@ $node_mut { $($tail)* });
+    // Node with children.
+    (@ $m:ident { $value:expr => $children:tt, $($tail:tt)* }) => {{
+        $m.append($value);
+        $m = $m.last_child().unwrap();
+        tree!(@ $m $children);
+        $m = $m.parent().unwrap();
+        tree!(@ $m { $($tail)* });
     }};
 
     () => { $crate::Tree::default() };
 
     ($root:expr) => { $crate::Tree::new($root) };
 
-    ($root:expr => $nodes:tt) => {{
-        let mut tree = tree!($root);
+    ($root:expr => $children:tt) => {{
+        let mut tree = $crate::Tree::new($root);
         {
             let mut node_mut = tree.root_mut();
-            tree!(@ node_mut $nodes);
-            // Prevent warnings about unnecessary mut.
+            tree!(@ node_mut $children);
+            // Prevent warnings for unnecessary mut and unused assignments.
             node_mut = node_mut;
-            // Prevent warnings about unused assignments to node_mut.
             let _ = node_mut;
         }
         tree
