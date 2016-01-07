@@ -49,11 +49,6 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         children.map(move |(_, i)| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns true if node has no parent.
-    pub fn is_orphan(&self) -> bool {
-        self.node().parent.is_none()
-    }
-
     /// Returns true if node has siblings.
     pub fn has_siblings(&self) -> bool {
         let node = self.node();

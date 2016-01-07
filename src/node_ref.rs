@@ -36,11 +36,6 @@ impl<'a, T: 'a> NodeRef<'a, T> {
         self.node.children.map(|(_, i)| self.tree.get_unchecked(i))
     }
 
-    /// Returns true if node has no parent.
-    pub fn is_orphan(&self) -> bool {
-        self.node.parent.is_none()
-    }
-
     /// Returns true if node has siblings.
     pub fn has_siblings(&self) -> bool {
         self.node.prev_sibling.is_some() || self.node.next_sibling.is_some()
