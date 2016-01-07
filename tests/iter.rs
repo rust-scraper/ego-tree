@@ -1,16 +1,9 @@
+#[macro_use]
 extern crate ego_tree;
-
-use ego_tree::Tree;
 
 #[test]
 fn values() {
-    let mut tree = Tree::new('a');
-    {
-        let mut root = tree.root_mut();
-        root.append('b');
-        root.append('c');
-        root.append('d');
-    }
+    let tree = tree!('a' => { 'b', 'c', 'd' });
 
     assert_eq!(
         vec![&'a', &'b', &'c', &'d'],
@@ -22,13 +15,7 @@ fn values() {
 fn values_mut() {
     use std::ascii::AsciiExt;
 
-    let mut tree = Tree::new('a');
-    {
-        let mut root = tree.root_mut();
-        root.append('b');
-        root.append('c');
-        root.append('d');
-    }
+    let mut tree = tree!('a' => { 'b', 'c', 'd' });
 
     for c in tree.values_mut() {
         *c = c.to_ascii_uppercase();
@@ -42,13 +29,7 @@ fn values_mut() {
 
 #[test]
 fn into_values() {
-    let mut tree = Tree::new('a');
-    {
-        let mut root = tree.root_mut();
-        root.append('b');
-        root.append('c');
-        root.append('d');
-    }
+    let tree = tree!('a' => { 'b', 'c', 'd' });
 
     assert_eq!(
         vec!['a', 'b', 'c', 'd'],
@@ -58,12 +39,12 @@ fn into_values() {
 
 #[test]
 fn ancestors() {
-    let mut tree = Tree::new('a');
-    let b = tree.root_mut().append('b');
-    let c = tree.get_mut(b).append('c');
-    let d = tree.get_mut(c).append('d');
+    let tree = tree!('a' => { 'b' => { 'c' => { 'd' } } });
 
-    let d = tree.get(d);
+    let d = tree.root()
+        .last_child().unwrap()
+        .last_child().unwrap()
+        .last_child().unwrap();
     assert_eq!(
         vec![&'c', &'b', &'a'],
         d.ancestors().map(|n| n.value()).collect::<Vec<_>>()
@@ -72,10 +53,7 @@ fn ancestors() {
 
 #[test]
 fn prev_siblings() {
-    let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-    tree.root_mut().append('c');
-    tree.root_mut().append('d');
+    let tree = tree!('a' => { 'b', 'c', 'd' });
 
     assert_eq!(
         vec![&'c', &'b'],
@@ -90,10 +68,7 @@ fn prev_siblings() {
 
 #[test]
 fn next_siblings() {
-    let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-    tree.root_mut().append('c');
-    tree.root_mut().append('d');
+    let tree = tree!('a' => { 'b', 'c', 'd' });
 
     assert_eq!(
         vec![&'c', &'d'],
@@ -108,11 +83,7 @@ fn next_siblings() {
 
 #[test]
 fn first_children() {
-    let mut tree = Tree::new('a');
-    let b = tree.root_mut().append('b');
-    tree.root_mut().append('c');
-    tree.get_mut(b).append('d');
-    tree.get_mut(b).append('e');
+    let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
 
     assert_eq!(
         vec![&'b', &'d'],
@@ -122,11 +93,7 @@ fn first_children() {
 
 #[test]
 fn last_children() {
-    let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-    let c = tree.root_mut().append('c');
-    tree.get_mut(c).append('d');
-    tree.get_mut(c).append('e');
+    let tree = tree!('a' => { 'b', 'c' => { 'd', 'e' } });
 
     assert_eq!(
         vec![&'c', &'e'],
