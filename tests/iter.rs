@@ -82,6 +82,26 @@ fn next_siblings() {
 }
 
 #[test]
+fn children() {
+    let tree = tree!('a' => { 'b', 'c', 'd' });
+
+    assert_eq!(
+        vec![&'b', &'c', &'d'],
+        tree.root().children().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn children_rev() {
+    let tree = tree!('a' => { 'b', 'c', 'd' });
+
+    assert_eq!(
+        vec![&'d', &'c', &'b'],
+        tree.root().children().rev().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn first_children() {
     let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
 
