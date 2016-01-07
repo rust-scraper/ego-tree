@@ -217,3 +217,51 @@ impl<T: PartialEq> PartialEq for Tree<T> {
         self.vec == other.vec
     }
 }
+
+#[macro_export]
+macro_rules! tree {
+    // No children.
+    (@ $node_mut:ident { }) => { };
+
+    // Ignore commas between children.
+    (@ $node_mut:ident { , $($tail:tt)* }) => {{
+        tree!(@ $node_mut { $($tail)* });
+    }};
+
+    // Single child.
+    (@ $node_mut:ident { $value:expr }) => {{
+        $node_mut.append($value);
+    }};
+
+    // Leaf child.
+    (@ $node_mut:ident { $value:expr, $($tail:tt)* }) => {{
+        $node_mut.append($value);
+        tree!(@ $node_mut { $($tail)* });
+    }};
+
+    // Child with children.
+    (@ $node_mut:ident { $value:expr => $children:tt $($tail:tt)* }) => {{
+        $node_mut.append($value);
+        $node_mut = $node_mut.last_child().unwrap();
+        tree!(@ $node_mut $children);
+        $node_mut = $node_mut.parent().unwrap();
+        tree!(@ $node_mut { $($tail)* });
+    }};
+
+    () => { $crate::Tree::default() };
+
+    ($root:expr) => { $crate::Tree::new($root) };
+
+    ($root:expr => $nodes:tt) => {{
+        let mut tree = tree!($root);
+        {
+            let mut node_mut = tree.root_mut();
+            tree!(@ node_mut $nodes);
+            // Prevent warnings about unnecessary mut.
+            node_mut = node_mut;
+            // Prevent warnings about unused assignments to node_mut.
+            let _ = node_mut;
+        }
+        tree
+    }};
+}
