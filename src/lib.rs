@@ -254,13 +254,13 @@ macro_rules! tree {
 
     ($root:expr) => { $crate::Tree::new($root) };
 
+    ($root:expr => { }) => { $crate::Tree::new($root) };
+
     ($root:expr => $children:tt) => {{
         let mut tree = $crate::Tree::new($root);
         {
             let mut node_mut = tree.root_mut();
             tree!(@ node_mut $children);
-            // Prevent warnings for unnecessary mut and unused assignments.
-            node_mut = node_mut;
             drop(node_mut);
         }
         tree
