@@ -83,7 +83,7 @@ macro_rules! axis_iterators {
     ($(#[$m:meta] $i:ident($f:path);)*) => {
         $(
             #[$m]
-            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            #[derive(Debug)]
             pub struct $i<'a, T: 'a> {
                 node: Option<NodeRef<'a, T>>,
             }
@@ -96,6 +96,16 @@ macro_rules! axis_iterators {
                     self.node = node.as_ref().and_then($f);
                     node
                 }
+            }
+
+            impl<'a, T: 'a> Copy for $i<'a, T> { }
+            impl<'a, T: 'a> Clone for $i<'a, T> {
+                fn clone(&self) -> Self { $i { node: self.node } }
+            }
+
+            impl<'a, T: 'a> Eq for $i<'a, T> { }
+            impl<'a, T: 'a> PartialEq for $i<'a, T> {
+                fn eq(&self, other: &Self) -> bool { self.node == other.node }
             }
         )*
     }
@@ -119,7 +129,7 @@ axis_iterators! {
 }
 
 /// Iterator over node children.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Children<'a, T: 'a> {
     front: Option<NodeRef<'a, T>>,
     back: Option<NodeRef<'a, T>>,
@@ -152,6 +162,23 @@ impl<'a, T: 'a> DoubleEndedIterator for Children<'a, T> {
             self.back = node.as_ref().and_then(NodeRef::prev_sibling);
             node
         }
+    }
+}
+
+impl<'a, T: 'a> Copy for Children<'a, T> { }
+impl<'a, T: 'a> Clone for Children<'a, T> {
+    fn clone(&self) -> Self {
+        Children {
+            front: self.front,
+            back: self.back,
+        }
+    }
+}
+
+impl<'a, T: 'a> Eq for Children<'a, T> { }
+impl<'a, T: 'a> PartialEq for Children<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.front == other.front && self.back == other.back
     }
 }
 
