@@ -218,6 +218,54 @@ impl<T: PartialEq> PartialEq for Tree<T> {
     }
 }
 
+/// Creates a `Tree` from expressions.
+///
+/// With no arguments, it is equivalent to `Tree::default`.
+///
+/// ```
+/// #[macro_use]
+/// extern crate ego_tree;
+/// use ego_tree::Tree;
+///
+/// # fn main() {
+/// let tree: Tree<i32> = tree!();
+/// # }
+/// ```
+///
+/// With a single argument, it is equivalent to `Tree::new`.
+///
+/// ```
+/// # #[macro_use]
+/// # extern crate ego_tree;
+/// # fn main() {
+/// let tree = tree!(0i32);
+/// # }
+/// ```
+///
+/// With a tree-like argument, a `Tree` is created, mutated, and returned.
+///
+/// ```
+/// # #[macro_use]
+/// # extern crate ego_tree;
+/// # fn main() {
+/// let tree = tree! {
+///     "root" => {
+///         "child_a",
+///         "child_b" => {
+///             "grandchild_a",
+///             "grandchild_b",
+///         },
+///         "child_c",
+///     }
+/// };
+/// # }
+/// ```
+///
+/// Note that nodes are inserted in the order they appear, which may not be the most efficient way
+/// of constructing the tree.
+///
+/// Additionally, after inserting the last node, it will travel all the way back up the tree, even
+/// when unnecessary.
 #[macro_export]
 macro_rules! tree {
     (@ $m:ident { }) => { };
