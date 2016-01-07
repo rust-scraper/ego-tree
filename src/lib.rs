@@ -261,7 +261,7 @@ macro_rules! tree {
             tree!(@ node_mut $children);
             // Prevent warnings for unnecessary mut and unused assignments.
             node_mut = node_mut;
-            let _ = node_mut;
+            drop(node_mut);
         }
         tree
     }};
