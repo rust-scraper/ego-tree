@@ -15,83 +15,55 @@ fn new() {
 }
 
 #[test]
-fn get() {
+fn root() {
     let tree = Tree::new('a');
-    let id = tree.root().id();
-    let root = tree.get(id);
-    assert_eq!(&'a', root.value());
+    assert_eq!(&'a', tree.root().value());
+}
+
+#[test]
+fn root_mut() {
+    let mut tree = Tree::new('a');
+    assert_eq!(&'a', tree.root_mut().value());
 }
 
 #[test]
 fn orphan() {
     let mut tree = Tree::new('a');
-    tree.orphan('b');
-    let root = tree.root();
-    assert_eq!(&'a', root.value());
-    assert_eq!(None, root.parent());
-    assert_eq!(None, root.prev_sibling());
-    assert_eq!(None, root.next_sibling());
-    assert_eq!(None, root.first_child());
-    assert_eq!(None, root.last_child());
+    let mut orphan = tree.orphan('b');
+    assert_eq!(&'b', orphan.value());
+    assert_eq!(None, orphan.parent());
 }
 
 #[test]
-fn append_1() {
-    let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-
-    let root = tree.root();
-    assert_eq!(&'a', root.value());
-    assert_eq!(root.first_child(), root.last_child());
-
-    let child = root.first_child().unwrap();
-    assert_eq!(&'b', child.value());
-    assert_eq!(Some(root), child.parent());
-    assert_eq!(None, child.prev_sibling());
-    assert_eq!(None, child.next_sibling());
-    assert_eq!(None, child.first_child());
-    assert_eq!(None, child.last_child());
+fn get() {
+    let tree = Tree::new('a');
+    let id = tree.root().id();
+    assert_eq!(tree.root(), tree.get(id));
 }
 
 #[test]
-fn append_2() {
+fn get_mut() {
     let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-    tree.root_mut().append('c');
-
-    let root = tree.root();
-    assert_eq!(&'a', root.value());
-
-    let first_child = root.first_child().unwrap();
-    assert_eq!(&'b', first_child.value());
-    assert_eq!(Some(root), first_child.parent());
-    assert_eq!(None, first_child.prev_sibling());
-
-    let last_child = root.last_child().unwrap();
-    assert_eq!(&'c', last_child.value());
-    assert_eq!(Some(root), last_child.parent());
-    assert_eq!(None, last_child.next_sibling());
-
-    assert_eq!(Some(last_child), first_child.next_sibling());
-    assert_eq!(Some(first_child), last_child.prev_sibling());
+    let id = tree.root().id();
+    assert_eq!(&'a', tree.get_mut(id).value());
 }
 
 #[test]
-fn append_3() {
-    let mut tree = Tree::new('a');
-    tree.root_mut().append('b');
-    tree.root_mut().append('c');
-    tree.root_mut().append('d');
+fn default() {
+    let tree = Tree::<i32>::default();
+    assert_eq!(&i32::default(), tree.root().value());
+}
 
-    let b = tree.root().first_child().unwrap();
-    let c = b.next_sibling().unwrap();
-    let d = tree.root().last_child().unwrap();
+#[test]
+fn clone() {
+    let one = Tree::new('a');
+    let two = one.clone();
+    assert_eq!(one, two);
+}
 
-    assert_eq!(&'b', b.value());
-    assert_eq!(&'c', c.value());
-    assert_eq!(&'d', d.value());
-
-    assert_eq!(Some(b), c.prev_sibling());
-    assert_eq!(Some(d), c.next_sibling());
-    assert_eq!(Some(c), d.prev_sibling());
+#[test]
+fn eq() {
+    let one = Tree::new('a');
+    let two = Tree::new('a');
+    assert_eq!(one, two);
 }
