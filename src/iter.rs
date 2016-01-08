@@ -1,6 +1,6 @@
 //! Tree iterators.
 
-use std::{fmt, slice, vec};
+use std::{fmt, iter, slice, vec};
 
 use super::{Tree, Node, NodeRef};
 
@@ -62,6 +62,34 @@ impl<T> fmt::Debug for IntoValues<T> {
     }
 }
 
+/// Iterator over all nodes.
+pub struct Nodes<'a, T: 'a> {
+    tree: &'a Tree<T>,
+    inner: iter::Enumerate<slice::Iter<'a, Node<T>>>,
+}
+
+impl<'a, T: 'a> Iterator for Nodes<'a, T> {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        self.inner.next().map(|(index, node)| {
+            NodeRef {
+                tree: self.tree,
+                node: node,
+                index: index,
+            }
+        })
+    }
+}
+
+impl<'a, T: 'a + fmt::Debug> fmt::Debug for Nodes<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Nodes")
+            .field("tree", &self.tree)
+            .finish()
+    }
+}
+
 impl<T> Tree<T> {
     /// Returns an iterator over node values in creation order.
     pub fn values(&self) -> Values<T> {
@@ -76,6 +104,14 @@ impl<T> Tree<T> {
     /// Returns an iterator that moves node values out of the tree in creation order.
     pub fn into_values(self) -> IntoValues<T> {
         IntoValues { inner: self.vec.into_iter() }
+    }
+
+    /// Returns an iterator over all nodes, including orphans, in creation order.
+    pub fn nodes(&self) -> Nodes<T> {
+        Nodes {
+            tree: self,
+            inner: self.vec.iter().enumerate(),
+        }
     }
 }
 
