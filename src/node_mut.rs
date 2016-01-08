@@ -72,6 +72,50 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.prepend_unchecked(index)
     }
 
+    /// Detaches from parent.
+    ///
+    /// If node has no parent, does nothing.
+    pub fn detach(&mut self) {
+        let parent = match self.node().parent {
+            Some(index) => index,
+            None => return,
+        };
+
+        let next_sibling = self.node().next_sibling;
+        let prev_sibling = self.node().prev_sibling;
+
+        // Update self.
+        {
+            let node = self.node_mut();
+            node.parent = None;
+            node.prev_sibling = None;
+            node.next_sibling = None;
+        }
+
+        // Update previous sibling.
+        if let Some(index) = prev_sibling {
+            let node = self.tree.get_node_unchecked_mut(index);
+            node.next_sibling = next_sibling;
+        }
+
+        // Update next sibling.
+        if let Some(index) = next_sibling {
+            let node = self.tree.get_node_unchecked_mut(index);
+            node.prev_sibling = prev_sibling;
+        }
+
+        // Update parent.
+        let parent = self.tree.get_node_unchecked_mut(parent);
+        let (first_child, last_child) = parent.children.unwrap();
+        if first_child == last_child {
+            parent.children = None;
+        } else if first_child == self.index {
+            parent.children = Some((next_sibling.unwrap(), last_child));
+        } else if last_child == self.index {
+            parent.children = Some((first_child, prev_sibling.unwrap()));
+        }
+    }
+
     /// Appends a child node by ID.
     ///
     /// # Panics
