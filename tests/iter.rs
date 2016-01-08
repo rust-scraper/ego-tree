@@ -36,6 +36,17 @@ fn into_values() {
 }
 
 #[test]
+fn nodes() {
+    let mut tree = tree!('a' => { 'b' => { 'c' }, 'd' });
+    tree.orphan('e').append('f');
+    tree.root_mut().append('g');
+    assert_eq!(
+        vec![&'a', &'b', &'c', &'d', &'e', &'f', &'g'],
+        tree.nodes().map(|n| n.value()).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn ancestors() {
     let tree = tree!('a' => { 'b' => { 'c' => { 'd' } } });
     let d = tree.root()
