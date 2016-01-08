@@ -61,10 +61,9 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Appends a child node.
-    pub fn append(&mut self, value: T) -> NodeId<T> {
+    pub fn append(&mut self, value: T) -> NodeMut<T> {
         let index = self.tree.orphan(value).index;
-        self.append_unchecked(index);
-        self.tree.node_id(index)
+        self.append_unchecked(index)
     }
 
     /// Appends a child node by ID.
@@ -73,14 +72,14 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// - Panics if `id` does not refere to a node in this tree.
     /// - Panics if the node referenced by `id` is not an orphan.
-    pub fn append_id(&mut self, id: NodeId<T>) {
+    pub fn append_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
         let index = self.tree.validate_id(id);
         assert!(index != 0);
         assert!(self.tree.get_node_unchecked(index).parent.is_none());
-        self.append_unchecked(index);
+        self.append_unchecked(index)
     }
 
-    fn append_unchecked(&mut self, index: usize) {
+    fn append_unchecked(&mut self, index: usize) -> NodeMut<T> {
         let last_child = self.node().children.map(|t| t.1);
 
         // Update new child.
@@ -97,12 +96,16 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         }
 
         // Update parent.
-        let node = self.node_mut();
-        if let Some((first, _)) = node.children {
-            node.children = Some((first, index));
-        } else {
-            node.children = Some((index, index));
+        {
+            let node = self.node_mut();
+            if let Some((first, _)) = node.children {
+                node.children = Some((first, index));
+            } else {
+                node.children = Some((index, index));
+            }
         }
+
+        NodeMut { tree: self.tree, index: index }
     }
 }
 
