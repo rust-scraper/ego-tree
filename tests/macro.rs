@@ -18,13 +18,6 @@ fn root() {
 }
 
 #[test]
-fn empty_children() {
-    let macro_tree = tree!('a' => { });
-    let manual_tree = Tree::new('a');
-    assert_eq!(manual_tree, macro_tree);
-}
-
-#[test]
 fn single_child() {
     let macro_tree = tree!('a' => { 'b' });
 
@@ -79,22 +72,11 @@ fn leaves_comma() {
 }
 
 #[test]
-fn nested_empty_children() {
-    let macro_tree = tree!('a' => { 'b' => { } });
-
-    let mut manual_tree = Tree::new('a');
-    manual_tree.root_mut().append('b');
-
-    assert_eq!(manual_tree, macro_tree);
-}
-
-#[test]
 fn nested_single_child() {
     let macro_tree = tree!('a' => { 'b' => { 'c' } });
 
     let mut manual_tree = Tree::new('a');
-    manual_tree.root_mut().append('b');
-    manual_tree.root_mut().last_child().unwrap().append('c');
+    manual_tree.root_mut().append('b').append('c');
 
     assert_eq!(manual_tree, macro_tree);
 }
@@ -110,8 +92,7 @@ fn nested_single_child_comma() {
     };
 
     let mut manual_tree = Tree::new('a');
-    manual_tree.root_mut().append('b');
-    manual_tree.root_mut().last_child().unwrap().append('c');
+    manual_tree.root_mut().append('b').append('c');
 
     assert_eq!(manual_tree, macro_tree);
 }
@@ -122,12 +103,11 @@ fn nested_leaves() {
 
     let mut manual_tree = Tree::new('a');
     {
-        let mut node_mut = manual_tree.root_mut();
-        node_mut.append('b');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('c');
-        node_mut.append('d');
-        node_mut.append('e');
+        let mut root = manual_tree.root_mut();
+        let mut node = root.append('b');
+        node.append('c');
+        node.append('d');
+        node.append('e');
     }
 
     assert_eq!(manual_tree, macro_tree);
@@ -147,12 +127,11 @@ fn nested_leaves_comma() {
 
     let mut manual_tree = Tree::new('a');
     {
-        let mut node_mut = manual_tree.root_mut();
-        node_mut.append('b');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('c');
-        node_mut.append('d');
-        node_mut.append('e');
+        let mut root = manual_tree.root_mut();
+        let mut node = root.append('b');
+        node.append('c');
+        node.append('d');
+        node.append('e');
     }
 
     assert_eq!(manual_tree, macro_tree);
@@ -163,14 +142,7 @@ fn nested_nested() {
     let macro_tree = tree!('a' => { 'b' => { 'c' => { 'd' } } });
 
     let mut manual_tree = Tree::new('a');
-    {
-        let mut node_mut = manual_tree.root_mut();
-        node_mut.append('b');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('c');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('d');
-    }
+    manual_tree.root_mut().append('b').append('c').append('d');
 
     assert_eq!(manual_tree, macro_tree);
 }
@@ -180,30 +152,23 @@ fn mixed() {
     let macro_tree = tree! {
         'a' => {
             'b',
-            'c' => { },
-            'd' => { 'e' },
-            'f' => { 'g' => { 'h' } },
-            'i',
+            'd' => { 'e', 'f' },
+            'g' => { 'h' => { 'i' } },
+            'j',
         }
     };
 
     let mut manual_tree = Tree::new('a');
     {
-        let mut node_mut = manual_tree.root_mut();
-        node_mut.append('b');
-        node_mut.append('c');
-        node_mut.append('d');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('e');
-        node_mut = node_mut.parent().unwrap();
-        node_mut.append('f');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('g');
-        node_mut = node_mut.last_child().unwrap();
-        node_mut.append('h');
-        node_mut = node_mut.parent().unwrap();
-        node_mut = node_mut.parent().unwrap();
-        node_mut.append('i');
+        let mut node = manual_tree.root_mut();
+        node.append('b');
+        {
+            let mut d = node.append('d');
+            d.append('e');
+            d.append('f');
+        }
+        node.append('g').append('h').append('i');
+        node.append('j');
     }
 
     assert_eq!(manual_tree, macro_tree);

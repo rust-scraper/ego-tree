@@ -268,34 +268,32 @@ impl<T: PartialEq> PartialEq for Tree<T> {
 /// when unnecessary.
 #[macro_export]
 macro_rules! tree {
-    (@ $m:ident { }) => { };
+    (@ $n:ident { }) => { };
 
     // Last leaf.
-    (@ $m:ident { $value:expr }) => {{
-        $m.append($value);
+    (@ $n:ident { $value:expr }) => {{
+        $n.append($value);
     }};
 
     // Leaf.
-    (@ $m:ident { $value:expr, $($tail:tt)* }) => {{
-        $m.append($value);
-        tree!(@ $m { $($tail)* });
+    (@ $n:ident { $value:expr, $($tail:tt)* }) => {{
+        $n.append($value);
+        tree!(@ $n { $($tail)* });
     }};
 
     // Last node with children.
-    (@ $m:ident { $value:expr => $children:tt }) => {{
-        $m.append($value);
-        $m = $m.last_child().unwrap();
-        tree!(@ $m $children);
-        $m = $m.parent().unwrap();
+    (@ $n:ident { $value:expr => $children:tt }) => {{
+        let mut node = $n.append($value);
+        tree!(@ node $children);
     }};
 
     // Node with children.
-    (@ $m:ident { $value:expr => $children:tt, $($tail:tt)* }) => {{
-        $m.append($value);
-        $m = $m.last_child().unwrap();
-        tree!(@ $m $children);
-        $m = $m.parent().unwrap();
-        tree!(@ $m { $($tail)* });
+    (@ $n:ident { $value:expr => $children:tt, $($tail:tt)* }) => {{
+        {
+            let mut node = $n.append($value);
+            tree!(@ node $children);
+        }
+        tree!(@ $n { $($tail)* });
     }};
 
     () => { $crate::Tree::default() };
@@ -307,9 +305,8 @@ macro_rules! tree {
     ($root:expr => $children:tt) => {{
         let mut tree = $crate::Tree::new($root);
         {
-            let mut node_mut = tree.root_mut();
-            tree!(@ node_mut $children);
-            drop(node_mut);
+            let mut node = tree.root_mut();
+            tree!(@ node $children);
         }
         tree
     }};
