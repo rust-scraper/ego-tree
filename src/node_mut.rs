@@ -75,6 +75,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// - Panics if the node referenced by `id` is not an orphan.
     pub fn append_id(&mut self, id: NodeId<T>) {
         let index = self.tree.validate_id(id);
+        assert!(index != 0);
         assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.append_unchecked(index);
     }
