@@ -67,3 +67,11 @@ fn eq() {
     let two = Tree::new('a');
     assert_eq!(one, two);
 }
+
+#[test]
+#[should_panic]
+fn neq() {
+    let one = Tree::new('a');
+    let two = Tree::new('b');
+    assert_eq!(one, two);
+}
