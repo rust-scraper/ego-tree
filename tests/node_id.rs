@@ -21,6 +21,22 @@ fn eq() {
 
 #[test]
 #[should_panic]
+fn neq() {
+    let mut tree = Tree::new('a');
+    let id = tree.root_mut().append('b').id();
+    assert_eq!(tree.root().id(), id);
+}
+
+#[test]
+#[should_panic]
+fn neq_tree() {
+    let one = Tree::new('a');
+    let two = Tree::new('a');
+    assert_eq!(one.root().id(), two.root().id());
+}
+
+#[test]
+#[should_panic]
 fn other_tree() {
     let one = Tree::new('a');
     let two = Tree::new('a');
