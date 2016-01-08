@@ -133,6 +133,13 @@ impl<T> Tree<T> {
         self.get_unchecked_mut(0)
     }
 
+    /// Creates an orphan node.
+    pub fn orphan(&mut self, value: T) -> NodeMut<T> {
+        let id = self.vec.len();
+        self.vec.push(Node::new(value));
+        self.get_unchecked_mut(id)
+    }
+
     /// Returns a reference to the specified node.
     ///
     /// # Panics
@@ -150,13 +157,6 @@ impl<T> Tree<T> {
     pub fn get_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
         let index = self.validate_id(id);
         self.get_unchecked_mut(index)
-    }
-
-    /// Creates an orphan node.
-    pub fn orphan(&mut self, value: T) -> NodeMut<T> {
-        let id = self.vec.len();
-        self.vec.push(Node::new(value));
-        self.get_unchecked_mut(id)
     }
 
     fn validate_id(&self, id: NodeId<T>) -> usize {
