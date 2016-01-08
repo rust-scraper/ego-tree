@@ -38,7 +38,6 @@ use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 ///
 /// Each `Tree` has a unique ID which is also given to each `NodeId` it creates. This is used to
 /// bounds check a `NodeId`.
-#[derive(Debug)]
 pub struct Tree<T> {
     id: usize,
     vec: Vec<Node<T>>,
@@ -85,6 +84,7 @@ pub struct NodeMut<'a, T: 'a> {
 mod node_id;
 mod node_ref;
 mod node_mut;
+mod debug;
 
 pub mod iter;
 
