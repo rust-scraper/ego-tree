@@ -122,3 +122,39 @@ fn last_children() {
         tree.root().last_children().map(|n| n.value()).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn traverse() {
+    use ego_tree::iter::Edge;
+
+    #[derive(Debug, PartialEq, Eq)]
+    enum Value<'a> {
+        Open(&'a char),
+        Close(&'a char),
+    }
+
+    let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
+
+    let traversal = tree.root().traverse().map(|edge| {
+        match edge {
+            Edge::Open(node) => Value::Open(node.value()),
+            Edge::Close(node) => Value::Close(node.value()),
+        }
+    }).collect::<Vec<_>>();
+
+    assert_eq!(
+        &[
+            Value::Open(&'a'),
+            Value::Open(&'b'),
+            Value::Open(&'d'),
+            Value::Close(&'d'),
+            Value::Open(&'e'),
+            Value::Close(&'e'),
+            Value::Close(&'b'),
+            Value::Open(&'c'),
+            Value::Close(&'c'),
+            Value::Close(&'a'),
+        ],
+        &traversal[..]
+    );
+}
