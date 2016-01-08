@@ -66,6 +66,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.append_unchecked(index)
     }
 
+    /// Prepends a child node.
+    pub fn prepend(&mut self, value: T) -> NodeMut<T> {
+        let index = self.tree.orphan(value).index;
+        self.prepend_unchecked(index)
+    }
+
     /// Appends a child node by ID.
     ///
     /// # Panics
@@ -77,6 +83,19 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         assert!(index != 0);
         assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.append_unchecked(index)
+    }
+
+    /// Prepends a child node by ID.
+    ///
+    /// # Panics
+    ///
+    /// - Panics if `id` does not refere to a node in this tree.
+    /// - Panics if the node referenced by `id` is not an orphan.
+    pub fn prepend_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
+        let index = self.tree.validate_id(id);
+        assert!(index != 0);
+        assert!(self.tree.get_node_unchecked(index).parent.is_none());
+        self.prepend_unchecked(index)
     }
 
     fn append_unchecked(&mut self, index: usize) -> NodeMut<T> {
@@ -100,6 +119,35 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             let node = self.node_mut();
             if let Some((first, _)) = node.children {
                 node.children = Some((first, index));
+            } else {
+                node.children = Some((index, index));
+            }
+        }
+
+        NodeMut { tree: self.tree, index: index }
+    }
+
+    fn prepend_unchecked(&mut self, index: usize) -> NodeMut<T> {
+        let first_child = self.node().children.map(|t| t.0);
+
+        // Update new child.
+        {
+            let node = self.tree.get_node_unchecked_mut(index);
+            node.parent = Some(self.index);
+            node.next_sibling = first_child;
+        }
+
+        // Update previous first child.
+        if let Some(child_index) = first_child {
+            let node = self.tree.get_node_unchecked_mut(child_index);
+            node.prev_sibling = Some(index);
+        }
+
+        // Update parent.
+        {
+            let node = self.node_mut();
+            if let Some((_, last)) = node.children {
+                node.children = Some((index, last));
             } else {
                 node.children = Some((index, index));
             }
