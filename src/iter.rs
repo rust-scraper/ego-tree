@@ -182,6 +182,90 @@ impl<'a, T: 'a> PartialEq for Children<'a, T> {
     }
 }
 
+/// An open or close edge of a node.
+#[derive(Debug)]
+pub enum Edge<'a, T: 'a> {
+    /// Open.
+    Open(NodeRef<'a, T>),
+
+    /// Close.
+    Close(NodeRef<'a, T>),
+}
+
+impl<'a, T: 'a> Copy for Edge<'a, T> { }
+impl<'a, T: 'a> Clone for Edge<'a, T> {
+    fn clone(&self) -> Self {
+        match *self {
+            Edge::Open(node) => Edge::Open(node),
+            Edge::Close(node) => Edge::Close(node),
+        }
+    }
+}
+
+impl<'a, T: 'a> Eq for Edge<'a, T> { }
+impl<'a, T: 'a> PartialEq for Edge<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (*self, *other) {
+            (Edge::Open(a), Edge::Open(b)) => a == b,
+            (Edge::Close(a), Edge::Close(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+/// Iterator which traverses a subtree.
+#[derive(Debug)]
+pub struct Traverse<'a, T: 'a> {
+    root: NodeRef<'a, T>,
+    edge: Option<Edge<'a, T>>,
+}
+
+impl<'a, T: 'a> Iterator for Traverse<'a, T> {
+    type Item = Edge<'a, T>;
+
+    fn next(&mut self) -> Option<Edge<'a, T>> {
+        match self.edge {
+            None => {
+                self.edge = Some(Edge::Open(self.root));
+            },
+            Some(Edge::Open(node)) => {
+                if let Some(first_child) = node.first_child() {
+                    self.edge = Some(Edge::Open(first_child));
+                } else {
+                    self.edge = Some(Edge::Close(node));
+                }
+            },
+            Some(Edge::Close(node)) => {
+                if node == self.root {
+                    self.edge = None;
+                } else if let Some(next_sibling) = node.next_sibling() {
+                    self.edge = Some(Edge::Open(next_sibling));
+                } else {
+                    self.edge = node.parent().map(Edge::Close);
+                }
+            },
+        }
+        self.edge
+    }
+}
+
+impl<'a, T: 'a> Copy for Traverse<'a, T> { }
+impl<'a, T: 'a> Clone for Traverse<'a, T> {
+    fn clone(&self) -> Self {
+        Traverse {
+            root: self.root,
+            edge: self.edge,
+        }
+    }
+}
+
+impl<'a, T: 'a> Eq for Traverse<'a, T> { }
+impl<'a, T: 'a> PartialEq for Traverse<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root && self.edge == other.edge
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<'a, T> {
@@ -214,5 +298,13 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's last children.
     pub fn last_children(&self) -> LastChildren<'a, T> {
         LastChildren { node: self.last_child() }
+    }
+
+    /// Returns an iterator which traverses the subtree starting at this node.
+    pub fn traverse(&self) -> Traverse<'a, T> {
+        Traverse {
+            root: *self,
+            edge: None,
+        }
     }
 }
