@@ -20,31 +20,31 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns a mutator of the parent node.
-    pub fn parent(self) -> Option<NodeMut<'a, T>> {
+    pub fn parent(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().parent;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
     /// Returns a mutator of the previous sibling.
-    pub fn prev_sibling(self) -> Option<NodeMut<'a, T>> {
+    pub fn prev_sibling(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().prev_sibling;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
     /// Returns a mutator of the next sibling.
-    pub fn next_sibling(self) -> Option<NodeMut<'a, T>> {
+    pub fn next_sibling(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().next_sibling;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
     /// Returns a mutator of the first child.
-    pub fn first_child(self) -> Option<NodeMut<'a, T>> {
+    pub fn first_child(&mut self) -> Option<NodeMut<T>> {
         let children = self.node().children;
         children.map(move |(i, _)| self.tree.get_unchecked_mut(i))
     }
 
     /// Returns a mutator of the last child.
-    pub fn last_child(self) -> Option<NodeMut<'a, T>> {
+    pub fn last_child(&mut self) -> Option<NodeMut<T>> {
         let children = self.node().children;
         children.map(move |(_, i)| self.tree.get_unchecked_mut(i))
     }
