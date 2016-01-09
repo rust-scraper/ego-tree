@@ -170,7 +170,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         }
 
-        NodeMut { tree: self.tree, index: index }
+        self.tree.get_unchecked_mut(index)
     }
 
     fn prepend_unchecked(&mut self, index: usize) -> NodeMut<T> {
@@ -199,17 +199,13 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         }
 
-        NodeMut { tree: self.tree, index: index }
+        self.tree.get_unchecked_mut(index)
     }
 }
 
 impl<'a, T: 'a> Into<NodeRef<'a, T>> for NodeMut<'a, T> {
     fn into(self) -> NodeRef<'a, T> {
-        NodeRef {
-            tree: self.tree,
-            node: self.tree.get_node_unchecked(self.index),
-            index: self.index,
-        }
+        self.tree.get_unchecked(self.index)
     }
 }
 
