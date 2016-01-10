@@ -85,6 +85,67 @@ fn has_children() {
 }
 
 #[test]
+fn append_1() {
+    let mut tree = tree!('a');
+    tree.root_mut().append('b');
+
+    let root = tree.root();
+    let child = root.first_child().unwrap();
+
+    assert_eq!(&'b', child.value());
+    assert_eq!(Some(child), root.last_child());
+    assert_eq!(Some(root), child.parent());
+    assert_eq!(None, child.next_sibling());
+    assert_eq!(None, child.next_sibling());
+}
+
+#[test]
+fn append_2() {
+    let mut tree = tree!('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = root.last_child().unwrap();
+
+    assert_eq!(&'b', b.value());
+    assert_eq!(&'c', c.value());
+    assert_eq!(Some(root), b.parent());
+    assert_eq!(Some(root), c.parent());
+    assert_eq!(None, b.prev_sibling());
+    assert_eq!(Some(c), b.next_sibling());
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(None, c.next_sibling());
+}
+
+#[test]
+fn append_3() {
+    let mut tree = tree!('a');
+    tree.root_mut().append('b');
+    tree.root_mut().append('c');
+    tree.root_mut().append('d');
+
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = b.next_sibling().unwrap();
+    let d = root.last_child().unwrap();
+
+    assert_eq!(&'b', b.value());
+    assert_eq!(&'c', c.value());
+    assert_eq!(&'d', d.value());
+    assert_eq!(Some(root), b.parent());
+    assert_eq!(Some(root), c.parent());
+    assert_eq!(Some(root), d.parent());
+    assert_eq!(None, b.prev_sibling());
+    assert_eq!(Some(c), b.next_sibling());
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(Some(d), c.next_sibling());
+    assert_eq!(Some(c), d.prev_sibling());
+    assert_eq!(None, d.next_sibling());
+}
+
+#[test]
 fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();
