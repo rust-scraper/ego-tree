@@ -285,6 +285,19 @@ fn insert_after() {
 }
 
 #[test]
+fn detach() {
+    let mut tree = tree!('a' => { 'b', 'd' });
+    let mut root = tree.root_mut();
+    let mut b = root.first_child().unwrap();
+    let mut c = b.insert_after('c');
+    c.detach();
+
+    assert!(c.parent().is_none());
+    assert!(c.prev_sibling().is_none());
+    assert!(c.next_sibling().is_none());
+}
+
+#[test]
 fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();
