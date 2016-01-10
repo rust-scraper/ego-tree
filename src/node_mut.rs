@@ -163,6 +163,20 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.reparent_append_unchecked(index);
     }
 
+    /// Reparents the children of a node by ID, prepending them to this node's children.
+    ///
+    /// If the referenced node does not have children, does nothing.
+    ///
+    /// May cause cycles, which can cause unsafety in other operations.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` does not refer to a node in this tree.
+    pub unsafe fn reparent_from_id_prepend(&mut self, id: NodeId<T>) {
+        let index = self.tree.validate_id(id);
+        self.reparent_prepend_unchecked(index);
+    }
+
     fn append_unchecked(&mut self, new_child_index: usize) -> NodeMut<T> {
         let last_child_index = self.node().children.map(|t| t.1);
 
@@ -335,6 +349,34 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         let node = self.node_mut();
         let first_child_index = node.children.unwrap().0;
         node.children = Some((first_child_index, new_children.1));
+    }
+
+    fn reparent_prepend_unchecked(&mut self, from_index: usize) {
+        let new_children = match self.tree.get_node_unchecked_mut(from_index).children.take() {
+            Some(indexes) => indexes,
+            None => return,
+        };
+
+        if self.node().children.is_none() {
+            self.node_mut().children = Some(new_children);
+            return;
+        }
+
+        let first_child_index = self.node().children.unwrap().0;
+
+        {
+            let first_child = self.tree.get_node_unchecked_mut(first_child_index);
+            first_child.prev_sibling = Some(new_children.1);
+        }
+
+        {
+            let last_new_child = self.tree.get_node_unchecked_mut(new_children.1);
+            last_new_child.next_sibling = Some(first_child_index);
+        }
+
+        let node = self.node_mut();
+        let last_child_index = node.children.unwrap().1;
+        node.children = Some((new_children.0, last_child_index));
     }
 }
 
