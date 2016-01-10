@@ -298,6 +298,30 @@ fn detach() {
 }
 
 #[test]
+fn reparent_from_id_append() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'c', 'd' },
+            'e' => { 'f', 'g' },
+        }
+    };
+    let e_id = tree.root().last_child().unwrap().id();
+    unsafe { tree.root_mut().first_child().unwrap().reparent_from_id_append(e_id); }
+
+    let b = tree.root().first_child().unwrap();
+    let e = tree.root().last_child().unwrap();
+    let d = b.first_child().unwrap().next_sibling().unwrap();
+    let g = b.last_child().unwrap();
+    let f = g.prev_sibling().unwrap();
+
+    assert_eq!(false, e.has_children());
+    assert_eq!(&'f', f.value());
+    assert_eq!(&'g', g.value());
+    assert_eq!(Some(f), d.next_sibling());
+    assert_eq!(Some(d), f.prev_sibling());
+}
+
+#[test]
 fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();
