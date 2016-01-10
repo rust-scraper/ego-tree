@@ -31,7 +31,7 @@ fn orphan() {
     let mut tree = Tree::new('a');
     let mut orphan = tree.orphan('b');
     assert_eq!(&'b', orphan.value());
-    assert_eq!(None, orphan.parent());
+    assert!(orphan.parent().is_none());
 }
 
 #[test]
