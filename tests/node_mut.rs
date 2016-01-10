@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate ego_tree;
 
+use ego_tree::NodeRef;
+
 #[test]
 fn value() {
     let mut tree = tree!('a');
@@ -80,4 +82,11 @@ fn has_children() {
     let mut tree = tree!('a' => { 'b', 'c' });
     assert_eq!(true, tree.root_mut().has_children());
     assert_eq!(false, tree.root_mut().first_child().unwrap().has_children());
+}
+
+#[test]
+fn into() {
+    let mut tree = tree!('a');
+    let node_ref: NodeRef<_> = tree.root_mut().into();
+    assert_eq!(&'a', node_ref.value());
 }
