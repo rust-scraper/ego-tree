@@ -9,306 +9,278 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.tree.get_node_unchecked_mut(self.index)
     }
 
-    /// Returns the value of the node.
+    /// Returns the value of this node.
     pub fn value(&mut self) -> &mut T {
         &mut self.node_mut().value
     }
 
-    /// Returns the ID of the node.
+    /// Returns the ID of this node.
     pub fn id(&self) -> NodeId<T> {
         self.tree.node_id(self.index)
     }
 
-    /// Returns a mutator of the parent node.
+    /// Returns a mutator of this node's parent.
     pub fn parent(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().parent;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns a mutator of the previous sibling.
+    /// Returns a mutator of this node's previous sibling.
     pub fn prev_sibling(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().prev_sibling;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns a mutator of the next sibling.
+    /// Returns a mutator of this node's next sibling.
     pub fn next_sibling(&mut self) -> Option<NodeMut<T>> {
         let index = self.node().next_sibling;
         index.map(move |i| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns a mutator of the first child.
+    /// Returns a mutator of this node's first child.
     pub fn first_child(&mut self) -> Option<NodeMut<T>> {
         let children = self.node().children;
         children.map(move |(i, _)| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns a mutator of the last child.
+    /// Returns a mutator of this node's last child.
     pub fn last_child(&mut self) -> Option<NodeMut<T>> {
         let children = self.node().children;
         children.map(move |(_, i)| self.tree.get_unchecked_mut(i))
     }
 
-    /// Returns true if node has siblings.
+    /// Returns true if this node has siblings.
     pub fn has_siblings(&self) -> bool {
         let node = self.node();
         node.prev_sibling.is_some() || node.next_sibling.is_some()
     }
 
-    /// Returns true if node has children.
+    /// Returns true if this node has children.
     pub fn has_children(&self) -> bool {
         self.node().children.is_some()
     }
 
-    /// Appends a child node.
+    /// Appends a new node to this node's children, returning a mutator of the new node.
     pub fn append(&mut self, value: T) -> NodeMut<T> {
         let index = self.tree.orphan(value).index;
         self.append_unchecked(index)
     }
 
-    /// Prepends a child node.
+    /// Prepends a new node to this node's children, returning a mutator of the new node.
     pub fn prepend(&mut self, value: T) -> NodeMut<T> {
         let index = self.tree.orphan(value).index;
         self.prepend_unchecked(index)
     }
 
-    /// Inserts a sibling before this node.
+    /// Inserts a new sibling before this node, returning a mutator of the new node.
     ///
     /// # Panics
     ///
-    /// Panics if node is an orphan.
+    /// Panics if this node is an orphan.
     pub fn insert_before(&mut self, value: T) -> NodeMut<T> {
         assert!(self.node().parent.is_some());
         let index = self.tree.orphan(value).index;
         self.insert_before_unchecked(index)
     }
 
-    /// Inserts a sibling after this node.
+    /// Inserts a new sibling before this node, returning a mutator of the new node.
     ///
     /// # Panics
     ///
-    /// Panics if node is an orphan.
+    /// Panics if this node is an orphan.
     pub fn insert_after(&mut self, value: T) -> NodeMut<T> {
         assert!(self.node().parent.is_some());
         let index = self.tree.orphan(value).index;
-        self.insert_before_unchecked(index)
+        self.insert_after_unchecked(index)
     }
 
-    /// Detaches from parent.
+    /// Detaches this node from its parent.
     ///
-    /// If node has no parent, does nothing.
+    /// If this node is an orphan, does nothing.
     pub fn detach(&mut self) {
         self.detach_unchecked();
     }
 
-    /// Appends a child node by ID.
+    /// Appends a node to this node's children by ID, returning a mutator of the referenced node.
     ///
-    /// May cause a cycle.
+    /// May cause cycles, which can cause unsafety in other operations.
     ///
     /// # Panics
     ///
-    /// - Panics if `id` does not refer to a node in this tree.
-    /// - Panics if the node referenced by `id` is not an orphan.
+    /// Panics if `id` does not refer to a node in this tree.
     pub unsafe fn append_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
         let index = self.tree.validate_id(id);
-        assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.append_unchecked(index)
     }
 
-    /// Prepends a child node by ID.
+    /// Prepends a node to this node's children by ID, returning a mutator of the referenced node.
     ///
-    /// May cause a cycle.
+    /// May cause cycles, which can cause unsafety in other operations.
     ///
     /// # Panics
     ///
-    /// - Panics if `id` does not refer to a node in this tree.
-    /// - Panics if the node referenced by `id` is not an orphan.
+    /// Panics if `id` does not refer to a node in this tree.
     pub unsafe fn prepend_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
         let index = self.tree.validate_id(id);
-        assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.prepend_unchecked(index)
     }
 
-    /// Inserts a sibling by ID before this node.
+    /// Inserts a sibling before this node by ID, returning a mutator of the referenced node.
     ///
-    /// May cause a cycle.
+    /// May cause cycles, which can cause unsafety in other operations.
     ///
     /// # Panics
     ///
-    /// - Panics if `id` does not refer to a node in this tree.
-    /// - Panics if the node referenced by `id` is not an orphan.
-    /// - Panics if this node is an orphan.
+    /// Panics if `id` does not refer to a node in this tree.
     pub unsafe fn insert_id_before(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        assert!(self.node().parent.is_some());
         let index = self.tree.validate_id(id);
-        assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.insert_before_unchecked(index)
     }
 
-    /// Inserts a sibling by ID after this node.
+    /// Inserts a sibling after this node by ID, returning a mutator of the referenced node.
     ///
-    /// May cause a cycle.
+    /// May cause cycles, which can cause unsafety in other operations.
     ///
     /// # Panics
     ///
-    /// - Panics if `id` does not refer to a node in this tree.
-    /// - Panics if the node referenced by `id` is not an orphan.
-    /// - Panics if this node is an orphan.
+    /// Panics if `id` does not refer to a node in this tree.
     pub unsafe fn insert_id_after(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        assert!(self.node().parent.is_some());
         let index = self.tree.validate_id(id);
-        assert!(self.tree.get_node_unchecked(index).parent.is_none());
         self.insert_after_unchecked(index)
     }
 
-    /// Reparents children from a node by ID, appending them to this node's children.
+    /// Reparents the children of a node by ID, appending them to this node's children.
     ///
     /// If the referenced node does not have children, does nothing.
     ///
-    /// May cause a cycle.
+    /// May cause cycles, which can cause unsafety in other operations.
     ///
     /// # Panics
     ///
-    /// - Panics if `id` does not refer to a node in this tree.
+    /// Panics if `id` does not refer to a node in this tree.
     pub unsafe fn reparent_from_id_append(&mut self, id: NodeId<T>) {
         let index = self.tree.validate_id(id);
         self.reparent_append_unchecked(index);
     }
 
-    fn append_unchecked(&mut self, index: usize) -> NodeMut<T> {
-        let last_child = self.node().children.map(|t| t.1);
+    fn append_unchecked(&mut self, new_child_index: usize) -> NodeMut<T> {
+        let last_child_index = self.node().children.map(|t| t.1);
 
-        // Update new child.
         {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.parent = Some(self.index);
-            node.prev_sibling = last_child;
+            let new_child = self.tree.get_node_unchecked_mut(new_child_index);
+            new_child.parent = Some(self.index);
+            new_child.prev_sibling = last_child_index;
         }
 
-        // Update old last child.
-        if let Some(child_index) = last_child {
-            let node = self.tree.get_node_unchecked_mut(child_index);
-            node.next_sibling = Some(index);
+        if let Some(last_child_index) = last_child_index {
+            let last_child = self.tree.get_node_unchecked_mut(last_child_index);
+            last_child.next_sibling = Some(new_child_index);
         }
 
-        // Update parent.
         {
             let node = self.node_mut();
-            if let Some((first, _)) = node.children {
-                node.children = Some((first, index));
+            if let Some((first_child_index, _)) = node.children {
+                node.children = Some((first_child_index, new_child_index));
             } else {
-                node.children = Some((index, index));
+                node.children = Some((new_child_index, new_child_index));
             }
         }
 
-        self.tree.get_unchecked_mut(index)
+        self.tree.get_unchecked_mut(new_child_index)
     }
 
-    fn prepend_unchecked(&mut self, index: usize) -> NodeMut<T> {
-        let first_child = self.node().children.map(|t| t.0);
+    fn prepend_unchecked(&mut self, new_child_index: usize) -> NodeMut<T> {
+        let first_child_index = self.node().children.map(|t| t.0);
 
-        // Update new child.
         {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.parent = Some(self.index);
-            node.next_sibling = first_child;
+            let new_child = self.tree.get_node_unchecked_mut(new_child_index);
+            new_child.parent = Some(self.index);
+            new_child.next_sibling = first_child_index;
         }
 
-        // Update old first child.
-        if let Some(child_index) = first_child {
-            let node = self.tree.get_node_unchecked_mut(child_index);
-            node.prev_sibling = Some(index);
+        if let Some(first_child_index) = first_child_index {
+            let first_child = self.tree.get_node_unchecked_mut(first_child_index);
+            first_child.prev_sibling = Some(new_child_index);
         }
 
-        // Update parent.
         {
             let node = self.node_mut();
-            if let Some((_, last)) = node.children {
-                node.children = Some((index, last));
+            if let Some((_, last_child_index)) = node.children {
+                node.children = Some((new_child_index, last_child_index));
             } else {
-                node.children = Some((index, index));
+                node.children = Some((new_child_index, new_child_index));
             }
         }
 
-        self.tree.get_unchecked_mut(index)
+        self.tree.get_unchecked_mut(new_child_index)
     }
 
-    fn insert_before_unchecked(&mut self, index: usize) -> NodeMut<T> {
-        let parent = self.node().parent;
-        let prev_sibling = self.node().prev_sibling;
+    fn insert_before_unchecked(&mut self, new_sibling_index: usize) -> NodeMut<T> {
+        let parent_index = self.node().parent;
+        let prev_sibling_index = self.node().prev_sibling;
 
-        // Update new sibling.
         {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.parent = parent;
-            node.next_sibling = Some(self.index);
-            node.prev_sibling = prev_sibling;
+            let new_sibling = self.tree.get_node_unchecked_mut(new_sibling_index);
+            new_sibling.parent = parent_index;
+            new_sibling.prev_sibling = prev_sibling_index;
+            new_sibling.next_sibling = Some(self.index);
         }
 
-        // Update previous sibling.
-        if let Some(prev_sibling) = prev_sibling {
-            let node = self.tree.get_node_unchecked_mut(prev_sibling);
-            node.next_sibling = Some(index);
+        if let Some(prev_sibling_index) = prev_sibling_index {
+            let prev_sibling = self.tree.get_node_unchecked_mut(prev_sibling_index);
+            prev_sibling.next_sibling = Some(new_sibling_index);
         }
 
-        // Update self.
-        self.node_mut().prev_sibling = Some(index);
+        self.node_mut().prev_sibling = Some(new_sibling_index);
 
-        // Update parent.
         {
-            let node = self.tree.get_node_unchecked_mut(parent.unwrap());
-            let (first_child, last_child) = node.children.unwrap();
-            if first_child == self.index {
-                node.children = Some((index, last_child));
+            let parent = self.tree.get_node_unchecked_mut(parent_index.unwrap());
+            let (first_child_index, last_child_index) = parent.children.unwrap();
+            if first_child_index == self.index {
+                parent.children = Some((new_sibling_index, last_child_index));
             }
         }
 
-        self.tree.get_unchecked_mut(index)
+        self.tree.get_unchecked_mut(new_sibling_index)
     }
 
-    fn insert_after_unchecked(&mut self, index: usize) -> NodeMut<T> {
-        let parent = self.node().parent;
-        let next_sibling = self.node().next_sibling;
+    fn insert_after_unchecked(&mut self, new_sibling_index: usize) -> NodeMut<T> {
+        let parent_index = self.node().parent;
+        let next_sibling_index = self.node().next_sibling;
 
-        // Update new sibling.
         {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.parent = parent;
-            node.prev_sibling = Some(self.index);
-            node.next_sibling = next_sibling;
+            let new_sibling = self.tree.get_node_unchecked_mut(new_sibling_index);
+            new_sibling.parent = parent_index;
+            new_sibling.prev_sibling = Some(self.index);
+            new_sibling.next_sibling = next_sibling_index;
         }
 
-        // Update next sibling.
-        if let Some(next_sibling) = next_sibling {
-            let node = self.tree.get_node_unchecked_mut(next_sibling);
-            node.prev_sibling = Some(index);
+        if let Some(next_sibling_index) = next_sibling_index {
+            let next_sibling = self.tree.get_node_unchecked_mut(next_sibling_index);
+            next_sibling.prev_sibling = Some(new_sibling_index);
         }
 
-        // Update self.
-        self.node_mut().next_sibling = Some(index);
+        self.node_mut().next_sibling = Some(new_sibling_index);
 
-        // Update parent.
         {
-            let node = self.tree.get_node_unchecked_mut(parent.unwrap());
-            let (first_child, last_child) = node.children.unwrap();
-            if last_child == self.index {
-                node.children = Some((first_child, index));
+            let parent = self.tree.get_node_unchecked_mut(parent_index.unwrap());
+            let (first_child_index, last_child_index) = parent.children.unwrap();
+            if last_child_index == self.index {
+                parent.children = Some((first_child_index, new_sibling_index));
             }
         }
 
-        self.tree.get_unchecked_mut(index)
+        self.tree.get_unchecked_mut(new_sibling_index)
     }
 
     fn detach_unchecked(&mut self) {
-        let parent = match self.node().parent {
+        let parent_index = match self.node().parent {
             Some(index) => index,
             None => return,
         };
+        let prev_sibling_index = self.node().prev_sibling;
+        let next_sibling_index = self.node().next_sibling;
 
-        let next_sibling = self.node().next_sibling;
-        let prev_sibling = self.node().prev_sibling;
-
-        // Update self.
         {
             let node = self.node_mut();
             node.parent = None;
@@ -316,58 +288,53 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             node.next_sibling = None;
         }
 
-        // Update previous sibling.
-        if let Some(index) = prev_sibling {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.next_sibling = next_sibling;
+        if let Some(prev_sibling_index) = prev_sibling_index {
+            let prev_sibling = self.tree.get_node_unchecked_mut(prev_sibling_index);
+            prev_sibling.next_sibling = next_sibling_index;
         }
 
-        // Update next sibling.
-        if let Some(index) = next_sibling {
-            let node = self.tree.get_node_unchecked_mut(index);
-            node.prev_sibling = prev_sibling;
+        if let Some(next_sibling_index) = next_sibling_index {
+            let next_sibling = self.tree.get_node_unchecked_mut(next_sibling_index);
+            next_sibling.prev_sibling = prev_sibling_index;
         }
 
-        // Update parent.
-        let parent = self.tree.get_node_unchecked_mut(parent);
-        let (first_child, last_child) = parent.children.unwrap();
-        if first_child == last_child {
+        let parent = self.tree.get_node_unchecked_mut(parent_index);
+        let (first_child_index, last_child_index) = parent.children.unwrap();
+        if first_child_index == last_child_index {
             parent.children = None;
-        } else if first_child == self.index {
-            parent.children = Some((next_sibling.unwrap(), last_child));
-        } else if last_child == self.index {
-            parent.children = Some((first_child, prev_sibling.unwrap()));
+        } else if first_child_index == self.index {
+            parent.children = Some((next_sibling_index.unwrap(), last_child_index));
+        } else if last_child_index == self.index {
+            parent.children = Some((first_child_index, prev_sibling_index.unwrap()));
         }
     }
 
-    fn reparent_append_unchecked(&mut self, index: usize) {
-        let children = match self.tree.get_node_unchecked_mut(index).children.take() {
-            Some(c) => c,
+    fn reparent_append_unchecked(&mut self, from_index: usize) {
+        let new_children = match self.tree.get_node_unchecked_mut(from_index).children.take() {
+            Some(indexes) => indexes,
             None => return,
         };
 
         if self.node().children.is_none() {
-            self.node_mut().children = Some(children);
+            self.node_mut().children = Some(new_children);
             return;
         }
 
-        // Update old last child.
-        let last_child = self.node().children.unwrap().1;
+        let last_child_index = self.node().children.unwrap().1;
+
         {
-            let node = self.tree.get_node_unchecked_mut(last_child);
-            node.next_sibling = Some(children.0);
+            let last_child = self.tree.get_node_unchecked_mut(last_child_index);
+            last_child.next_sibling = Some(new_children.0);
         }
 
-        // Update reparented first child.
         {
-            let node = self.tree.get_node_unchecked_mut(children.0);
-            node.prev_sibling = Some(last_child);
+            let first_new_child = self.tree.get_node_unchecked_mut(new_children.0);
+            first_new_child.prev_sibling = Some(last_child_index);
         }
 
-        // Update parent.
         let node = self.node_mut();
-        let first_child = node.children.unwrap().0;
-        node.children = Some((first_child, children.1));
+        let first_child_index = node.children.unwrap().0;
+        node.children = Some((first_child_index, new_children.1));
     }
 }
 
