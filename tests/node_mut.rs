@@ -246,6 +246,45 @@ fn insert_before() {
 }
 
 #[test]
+fn insert_after_first() {
+    let mut tree = tree!('a' => { 'b' });
+    tree.root_mut().first_child().unwrap().insert_after('c');
+
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = root.last_child().unwrap();
+
+    assert_eq!(&'c', c.value());
+    assert_eq!(Some(root), c.parent());
+    assert_eq!(None, b.prev_sibling());
+    assert_eq!(Some(c), b.next_sibling());
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(None, c.next_sibling());
+}
+
+#[test]
+fn insert_after() {
+    let mut tree = tree!('a' => { 'b', 'd' });
+    tree.root_mut().first_child().unwrap().insert_after('c');
+
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = b.next_sibling().unwrap();
+    let d = root.last_child().unwrap();
+
+    assert_eq!(&'c', c.value());
+    assert_eq!(Some(root), b.parent());
+    assert_eq!(Some(root), c.parent());
+    assert_eq!(Some(root), d.parent());
+    assert_eq!(None, b.prev_sibling());
+    assert_eq!(Some(c), b.next_sibling());
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(Some(d), c.next_sibling());
+    assert_eq!(Some(c), d.prev_sibling());
+    assert_eq!(None, d.next_sibling());
+}
+
+#[test]
 fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();
