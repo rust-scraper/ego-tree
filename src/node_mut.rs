@@ -385,12 +385,3 @@ impl<'a, T: 'a> Into<NodeRef<'a, T>> for NodeMut<'a, T> {
         self.tree.get_unchecked(self.index)
     }
 }
-
-impl<'a, T: 'a> Eq for NodeMut<'a, T> { }
-impl<'a, T: 'a> PartialEq for NodeMut<'a, T> {
-    #[allow(trivial_casts)]
-    fn eq(&self, other: &Self) -> bool {
-        self.tree as *const _ == other.tree as *const _
-            && self.index == other.index
-    }
-}
