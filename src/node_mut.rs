@@ -161,6 +161,20 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.insert_after_unchecked(index)
     }
 
+    /// Reparents children from a node by ID, appending them to this node's children.
+    ///
+    /// If the referenced node does not have children, does nothing.
+    ///
+    /// May cause a cycle.
+    ///
+    /// # Panics
+    ///
+    /// - Panics if `id` does not refer to a node in this tree.
+    pub unsafe fn reparent_from_id_append(&mut self, id: NodeId<T>) {
+        let index = self.tree.validate_id(id);
+        self.reparent_append_unchecked(index);
+    }
+
     fn append_unchecked(&mut self, index: usize) -> NodeMut<T> {
         let last_child = self.node().children.map(|t| t.1);
 
@@ -171,7 +185,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             node.prev_sibling = last_child;
         }
 
-        // Update previous last child.
+        // Update old last child.
         if let Some(child_index) = last_child {
             let node = self.tree.get_node_unchecked_mut(child_index);
             node.next_sibling = Some(index);
@@ -200,7 +214,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             node.next_sibling = first_child;
         }
 
-        // Update previous first child.
+        // Update old first child.
         if let Some(child_index) = first_child {
             let node = self.tree.get_node_unchecked_mut(child_index);
             node.prev_sibling = Some(index);
@@ -324,6 +338,36 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         } else if last_child == self.index {
             parent.children = Some((first_child, prev_sibling.unwrap()));
         }
+    }
+
+    fn reparent_append_unchecked(&mut self, index: usize) {
+        let children = match self.tree.get_node_unchecked_mut(index).children.take() {
+            Some(c) => c,
+            None => return,
+        };
+
+        if self.node().children.is_none() {
+            self.node_mut().children = Some(children);
+            return;
+        }
+
+        // Update old last child.
+        let last_child = self.node().children.unwrap().1;
+        {
+            let node = self.tree.get_node_unchecked_mut(last_child);
+            node.next_sibling = Some(children.0);
+        }
+
+        // Update reparented first child.
+        {
+            let node = self.tree.get_node_unchecked_mut(children.0);
+            node.prev_sibling = Some(last_child);
+        }
+
+        // Update parent.
+        let node = self.node_mut();
+        let first_child = node.children.unwrap().0;
+        node.children = Some((first_child, children.1));
     }
 }
 
