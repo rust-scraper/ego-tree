@@ -86,6 +86,26 @@ struct Node<T> {
 /// it.
 ///
 /// With the original `Tree`, a `NodeId` can be used to obtain a `NodeRef` or `NodeMut`.
+///
+/// # Examples
+///
+/// ## Obtaining an ID
+///
+/// ```
+/// use ego_tree::Tree;
+///
+/// let tree = Tree::new('a');
+/// let root_id = tree.root().id();
+/// ```
+///
+/// ## Obtaining a `NodeRef`
+///
+/// ```
+/// # use ego_tree::Tree;
+/// # let tree = Tree::new('a');
+/// # let root_id = tree.root().id();
+/// let root = tree.get(root_id);
+/// ```
 #[derive(Debug)]
 pub struct NodeId<T> {
     tree_id: usize,
@@ -156,12 +176,12 @@ impl<T> Tree<T> {
         self.get_unchecked(0)
     }
 
-    /// Returns a mutable reference to the root node.
+    /// Returns a mutator of the root node.
     pub fn root_mut(&mut self) -> NodeMut<T> {
         self.get_unchecked_mut(0)
     }
 
-    /// Creates an orphan node.
+    /// Creates an orphan node, returning a mutator of it.
     pub fn orphan(&mut self, value: T) -> NodeMut<T> {
         let id = self.vec.len();
         self.vec.push(Node::new(value));
@@ -177,7 +197,7 @@ impl<T> Tree<T> {
         self.get_unchecked(self.validate_id(id))
     }
 
-    /// Returns a mutator for the specified node.
+    /// Returns a mutator of the specified node.
     ///
     /// # Panics
     ///
