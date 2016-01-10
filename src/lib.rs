@@ -1,18 +1,46 @@
 //! Vec-backed mutable tree.
 //!
+//! `ego_tree` is on [Crates.io][crate] and [GitHub][github].
+//!
+//! [crate]: https://crates.io/crates/ego-tree
+//! [github]: https://github.com/programble/ego-tree
+//!
 //! # Behaviour
 //!
 //! - Nodes have zero or more ordered children.
-//! - Nodes have at most one parent, i.e. orphan nodes are valid.
+//! - Nodes have at most one parent; orphan nodes are valid.
 //! - Individual nodes are not dropped until the tree is dropped.
 //! - A node's parent, next sibling, previous sibling, first child and last child can be accessed
 //!   in constant time.
 //! - Node IDs act as weak references, i.e. they are not tied to the lifetime of the tree.
 //!
+//! All methods in this crate execute in constant time, and all iterators execute to completion in
+//! linear time.
+//!
 //! # Examples
 //!
+//! ## Creating a tree
+//!
 //! ```
-//! // TODO
+//! #[macro_use]
+//! extern crate ego_tree;
+//!
+//! # fn main() {
+//! let tree = tree!('a' => { 'b', 'c' => { 'd', 'e' } });
+//! # }
+//! ```
+//!
+//! or
+//!
+//! ```
+//! use ego_tree::Tree;
+//!
+//! let mut tree = Tree::new('a');
+//! let mut root = tree.root_mut();
+//! root.append('b');
+//! let mut c = root.append('c');
+//! c.append('d');
+//! c.append('e');
 //! ```
 
 #![warn(
