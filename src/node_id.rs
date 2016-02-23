@@ -1,16 +1,10 @@
-use std::marker::PhantomData;
+#![allow(expl_impl_clone_on_copy)]
 
 use super::NodeId;
 
 impl<T> Copy for NodeId<T> { }
 impl<T> Clone for NodeId<T> {
-    fn clone(&self) -> Self {
-        NodeId {
-            tree_id: self.tree_id,
-            index: self.index,
-            marker: PhantomData,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<T> Eq for NodeId<T> { }
