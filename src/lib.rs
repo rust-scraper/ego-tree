@@ -56,6 +56,9 @@
     variant_size_differences
 )]
 
+// Clippy.
+#![allow(unknown_lints)]
+
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 
