@@ -242,8 +242,9 @@ impl<'a, T: 'a> Eq for Edge<'a, T> { }
 impl<'a, T: 'a> PartialEq for Edge<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         match (*self, *other) {
-            (Edge::Open(a), Edge::Open(b)) => a == b,
-            (Edge::Close(a), Edge::Close(b)) => a == b,
+            (Edge::Open(a), Edge::Open(b)) | (Edge::Close(a), Edge::Close(b)) => {
+                a == b
+            },
             _ => false,
         }
     }
