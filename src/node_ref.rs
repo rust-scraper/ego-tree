@@ -1,3 +1,5 @@
+#![allow(expl_impl_clone_on_copy)]
+
 use super::{NodeRef, NodeId};
 
 impl<'a, T: 'a> NodeRef<'a, T> {
@@ -49,13 +51,7 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 
 impl<'a, T: 'a> Copy for NodeRef<'a, T> { }
 impl<'a, T: 'a> Clone for NodeRef<'a, T> {
-    fn clone(&self) -> Self {
-        NodeRef {
-            tree: self.tree,
-            node: self.node,
-            index: self.index,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<'a, T: 'a> Eq for NodeRef<'a, T> { }
