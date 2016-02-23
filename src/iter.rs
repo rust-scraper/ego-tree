@@ -1,5 +1,7 @@
 //! Tree iterators.
 
+#![allow(expl_impl_clone_on_copy)]
+
 use std::{fmt, iter, slice, vec};
 
 use super::{Tree, Node, NodeRef};
@@ -136,7 +138,7 @@ macro_rules! axis_iterators {
 
             impl<'a, T: 'a> Copy for $i<'a, T> { }
             impl<'a, T: 'a> Clone for $i<'a, T> {
-                fn clone(&self) -> Self { $i { node: self.node } }
+                fn clone(&self) -> Self { *self }
             }
 
             impl<'a, T: 'a> Eq for $i<'a, T> { }
@@ -203,12 +205,7 @@ impl<'a, T: 'a> DoubleEndedIterator for Children<'a, T> {
 
 impl<'a, T: 'a> Copy for Children<'a, T> { }
 impl<'a, T: 'a> Clone for Children<'a, T> {
-    fn clone(&self) -> Self {
-        Children {
-            front: self.front,
-            back: self.back,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<'a, T: 'a> Eq for Children<'a, T> { }
@@ -230,12 +227,7 @@ pub enum Edge<'a, T: 'a> {
 
 impl<'a, T: 'a> Copy for Edge<'a, T> { }
 impl<'a, T: 'a> Clone for Edge<'a, T> {
-    fn clone(&self) -> Self {
-        match *self {
-            Edge::Open(node) => Edge::Open(node),
-            Edge::Close(node) => Edge::Close(node),
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<'a, T: 'a> Eq for Edge<'a, T> { }
@@ -288,12 +280,7 @@ impl<'a, T: 'a> Iterator for Traverse<'a, T> {
 
 impl<'a, T: 'a> Copy for Traverse<'a, T> { }
 impl<'a, T: 'a> Clone for Traverse<'a, T> {
-    fn clone(&self) -> Self {
-        Traverse {
-            root: self.root,
-            edge: self.edge,
-        }
-    }
+    fn clone(&self) -> Self { *self }
 }
 
 impl<'a, T: 'a> Eq for Traverse<'a, T> { }
