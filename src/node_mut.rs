@@ -83,7 +83,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.insert_before_unchecked(index)
     }
 
-    /// Inserts a new sibling before this node, returning a mutator of the new node.
+    /// Inserts a new sibling after this node, returning a mutator of the new node.
     ///
     /// # Panics
     ///
