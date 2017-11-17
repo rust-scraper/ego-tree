@@ -329,6 +329,9 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             None => return,
         };
 
+        self.tree.get_node_unchecked_mut(new_children.0).parent = Some(self.index);
+        self.tree.get_node_unchecked_mut(new_children.1).parent = Some(self.index);
+
         if self.node().children.is_none() {
             self.node_mut().children = Some(new_children);
             return;
@@ -356,6 +359,9 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             Some(indexes) => indexes,
             None => return,
         };
+
+        self.tree.get_node_unchecked_mut(new_children.0).parent = Some(self.index);
+        self.tree.get_node_unchecked_mut(new_children.1).parent = Some(self.index);
 
         if self.node().children.is_none() {
             self.node_mut().children = Some(new_children);
