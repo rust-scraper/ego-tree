@@ -2,9 +2,9 @@
 
 #![allow(expl_impl_clone_on_copy)]
 
-use std::{fmt, iter, slice, vec};
+use std::{fmt, iter, slice, vec, collections};
 
-use super::{Tree, Node, NodeRef};
+use super::{Tree, Node, NodeRef, NodeId};
 
 /// Iterator over node values.
 #[derive(Clone)]
@@ -290,6 +290,42 @@ impl<'a, T: 'a> PartialEq for Traverse<'a, T> {
     }
 }
 
+/// Fitler iterator over child elements.
+/// If child nodes is processed then parent nodes will be ignored.
+#[derive(Debug,Clone)]
+pub struct FilterDeepNodes<'a, T: 'a, P> {
+    traverse: Traverse<'a, T>,
+    filter: P,
+    hashset: collections::HashSet<NodeId<T>>,
+}
+
+impl<'a, T: 'a, P> Iterator for FilterDeepNodes<'a, T, P> where P: FnMut(&NodeRef<'a, T>) -> bool {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        for edge in self.traverse {
+            match edge {
+                Edge::Open(_) => {},
+                Edge::Close(node) => {
+                    let node_id = node.id();
+                    let is_contains_child = self.hashset.contains(&node_id);
+                    if !is_contains_child {
+                        let is_match = (self.filter)(&node);
+                        if is_match {
+                            let _ = self.hashset.insert(node_id);
+                            for parent in node.ancestors() {
+                                let _ = self.hashset.insert(parent.id());
+                            }
+                            return Some(node);
+                        }
+                    }
+                },
+            }
+        }
+        return None;
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<'a, T> {
@@ -329,6 +365,17 @@ impl<'a, T: 'a> NodeRef<'a, T> {
         Traverse {
             root: *self,
             edge: None,
+        }
+    }
+
+    /// Returns an fitler iterator over child elements.
+    /// If child nodes is processed then parent nodes will be ignored.
+    pub fn filter_deep_nodes<P>(&self, filter: P) -> FilterDeepNodes<'a, T, P>
+        where P: FnMut(&NodeRef<'a, T>) -> bool {
+        FilterDeepNodes {
+            traverse: self.traverse(),
+            filter: filter,
+            hashset: collections::HashSet::new(),
         }
     }
 }
