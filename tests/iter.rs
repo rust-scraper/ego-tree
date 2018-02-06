@@ -124,6 +124,22 @@ fn last_children() {
 }
 
 #[test]
+fn filter_deep_nodes() {
+    let tree = tree!('a' => { 
+        'b' => { 'd', 'e' },
+        'f' => { 'g' => { 'h' => { 'i' => {'j'} } } },
+    }); 
+    let matched_nodes: Vec<_> = tree.root().filter_deep_nodes(|node|{
+        let node_values = ['a','b','c','d','e','f','g','h','i','j'];
+        return node_values.contains(node.value());
+    }).collect();
+    assert_eq!(matched_nodes.len(), 3);
+    assert_eq!(*matched_nodes.get(0).unwrap().value(), 'd');
+    assert_eq!(*matched_nodes.get(1).unwrap().value(), 'e');
+    assert_eq!(*matched_nodes.get(2).unwrap().value(), 'j');
+}
+
+#[test]
 fn traverse() {
     use ego_tree::iter::Edge;
 
