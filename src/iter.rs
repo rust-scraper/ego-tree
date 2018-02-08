@@ -290,6 +290,36 @@ impl<'a, T: 'a> PartialEq for Traverse<'a, T> {
     }
 }
 
+/// Iterator over node and its descendants.
+#[derive(Debug)]
+pub struct Descendants<'a, T: 'a>(Traverse<'a, T>);
+
+impl<'a, T: 'a> Iterator for Descendants<'a, T> {
+    type Item = NodeRef<'a, T>;
+
+    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+        loop {
+            match self.0.next() {
+                Some(Edge::Open(node)) => return Some(node),
+                Some(Edge::Close(_)) => {}
+                None => return None
+            }
+        }
+    }
+}
+
+impl<'a, T: 'a> Copy for Descendants<'a, T> { }
+impl<'a, T: 'a> Clone for Descendants<'a, T> {
+    fn clone(&self) -> Self { *self }
+}
+
+impl<'a, T: 'a> Eq for Descendants<'a, T> { }
+impl<'a, T: 'a> PartialEq for Descendants<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator over this node's ancestors.
     pub fn ancestors(&self) -> Ancestors<'a, T> {
@@ -330,5 +360,13 @@ impl<'a, T: 'a> NodeRef<'a, T> {
             root: *self,
             edge: None,
         }
+    }
+
+    /// Returns an iterator over this node and its descendants.
+    pub fn descendants(&self) -> Descendants<'a, T> {
+        Descendants(Traverse {
+            root: *self,
+            edge: None,
+        })
     }
 }
