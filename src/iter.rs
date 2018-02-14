@@ -316,7 +316,7 @@ impl<'a, T: 'a> Clone for Descendants<'a, T> {
 impl<'a, T: 'a> Eq for Descendants<'a, T> { }
 impl<'a, T: 'a> PartialEq for Descendants<'a, T> {
     fn eq(&self, other: &Self) -> bool {
-        self == other
+        self.0 == other.0
     }
 }
 
