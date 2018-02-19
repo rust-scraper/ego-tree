@@ -12,6 +12,7 @@ fn values() {
 
 #[test]
 fn values_mut() {
+    #[allow(unused_imports)]
     use std::ascii::AsciiExt;
 
     let mut tree = tree!('a' => { 'b', 'c', 'd' });
@@ -156,5 +157,23 @@ fn traverse() {
             Value::Close(&'a'),
         ],
         &traversal[..]
+    );
+}
+
+#[test]
+fn descendants() {
+    let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
+
+    let descendants = tree.root().descendants().map(|n| n.value()).collect::<Vec<_>>();
+
+    assert_eq!(
+        &[
+            &'a',
+            &'b',
+            &'d',
+            &'e',
+            &'c',
+        ],
+        &descendants[..]
     );
 }
