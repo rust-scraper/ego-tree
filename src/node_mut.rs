@@ -1,4 +1,4 @@
-use super::{NodeMut, Node, NodeId, NodeRef};
+use super::{Tree, NodeMut, Node, NodeId, NodeRef};
 
 impl<'a, T: 'a> NodeMut<'a, T> {
     fn node(&self) -> &Node<T> {
@@ -7,6 +7,11 @@ impl<'a, T: 'a> NodeMut<'a, T> {
 
     fn node_mut(&mut self) -> &mut Node<T> {
         self.tree.get_node_unchecked_mut(self.index)
+    }
+
+    /// Returns the underlying tree.
+    pub fn tree(&mut self) -> &mut Tree<T> {
+        &mut self.tree
     }
 
     /// Returns the value of this node.
