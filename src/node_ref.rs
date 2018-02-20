@@ -1,8 +1,13 @@
 #![allow(expl_impl_clone_on_copy)]
 
-use super::{NodeRef, NodeId};
+use super::{Tree, NodeRef, NodeId};
 
 impl<'a, T: 'a> NodeRef<'a, T> {
+    /// Returns the underlying tree.
+    pub fn tree(&self) -> &Tree<T> {
+        &self.tree
+    }
+
     /// Returns the value of this node.
     pub fn value(&self) -> &'a T {
         &self.node.value

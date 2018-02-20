@@ -351,3 +351,19 @@ fn into() {
     let node_ref: NodeRef<_> = tree.root_mut().into();
     assert_eq!(&'a', node_ref.value());
 }
+
+#[test]
+fn tree() {
+    let mut tree = tree!('a');
+
+    {
+        let mut root = tree.root_mut();
+        let tree2 = root.tree();
+        tree2.root_mut().append('b');
+    }
+
+    let root = tree.root();
+    let child = root.first_child().unwrap();
+
+    assert_eq!(&'b', child.value());
+}

@@ -88,3 +88,9 @@ fn neq_tree() {
     let two = one.clone();
     assert_eq!(one.root(), two.root());
 }
+
+#[test]
+fn tree() {
+    let tree = tree!('a');
+    assert_eq!(tree.root().tree(), &tree);
+}
