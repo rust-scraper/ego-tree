@@ -8,6 +8,5 @@ keywords = ["tree", "vec", "id", "index"]
 authors = ["Curtis McEnroe <programble@gmail.com>"]
 license = "ISC"
 
-documentation = "https://cmcenroe.me/ego-tree/ego_tree"
 repository = "https://github.com/programble/ego-tree"
 readme = "README.md"

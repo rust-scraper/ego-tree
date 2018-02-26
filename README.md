@@ -10,10 +10,6 @@
 
 Vec-backed mutable tree.
 
-## [Documentation][docs]
-
-[docs]: https://cmcenroe.me/ego-tree/ego_tree
-
 ## License
 
 Copyright © 2016, Curtis McEnroe <curtis@cmcenroe.me>
