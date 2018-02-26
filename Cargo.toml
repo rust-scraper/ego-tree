@@ -1,6 +1,6 @@
 [package]
 name = "ego-tree"
-version = "0.2.0"
+version = "0.3.0"
 
 description = "Vec-backed mutable tree"
 keywords = ["tree", "vec", "id", "index"]
