@@ -8,4 +8,4 @@
 [crate-badge]: https://img.shields.io/crates/v/ego-tree.svg
 [travis-badge]: https://img.shields.io/travis/programble/ego-tree.svg
 
-Vec-backed mutable tree.
+Vec-backed ID-tree.

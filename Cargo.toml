@@ -1,12 +1,9 @@
 [package]
 name = "ego-tree"
 version = "0.3.0"
-
-description = "Vec-backed mutable tree"
+description = "Vec-backed ID-tree"
 keywords = ["tree", "vec", "id", "index"]
-
 authors = ["Curtis McEnroe <programble@gmail.com>"]
 license = "ISC"
-
 repository = "https://github.com/programble/ego-tree"
 readme = "README.md"
