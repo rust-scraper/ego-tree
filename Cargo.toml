@@ -1,6 +1,6 @@
 [package]
 name = "ego-tree"
-version = "0.3.0"
+version = "0.4.0"
 description = "Vec-backed ID-tree"
 keywords = ["tree", "vec", "id", "index"]
 authors = ["Curtis McEnroe <programble@gmail.com>"]
