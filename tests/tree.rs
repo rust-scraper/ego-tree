@@ -38,20 +38,14 @@ fn orphan() {
 fn get() {
     let tree = Tree::new('a');
     let id = tree.root().id();
-    assert_eq!(tree.root(), tree.get(id));
+    assert_eq!(tree.root(), unsafe { tree.get(id) });
 }
 
 #[test]
 fn get_mut() {
     let mut tree = Tree::new('a');
     let id = tree.root().id();
-    assert_eq!(&'a', tree.get_mut(id).value());
-}
-
-#[test]
-fn default() {
-    let tree = Tree::<i32>::default();
-    assert_eq!(&i32::default(), tree.root().value());
+    assert_eq!(&'a', unsafe { tree.get_mut(id).value() });
 }
 
 #[test]

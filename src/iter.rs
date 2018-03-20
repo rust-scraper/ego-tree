@@ -1,119 +1,119 @@
-//! Tree iterators.
+use std::{slice, vec};
+use std::ops::Range;
 
-#![allow(expl_impl_clone_on_copy)]
+use {Tree, Id, Node, NodeRef};
 
-use std::{fmt, iter, slice, vec};
-
-use super::{Tree, Node, NodeRef};
-
-/// Iterator over node values.
-#[derive(Clone)]
-pub struct Values<'a, T: 'a> {
-    inner: slice::Iter<'a, Node<T>>,
+/// Iterator that moves out of a tree in insert order.
+#[derive(Debug)]
+pub struct IntoIter<T>(vec::IntoIter<Node<T>>);
+impl<T> ExactSizeIterator for IntoIter<T> { }
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|node| node.value)
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+impl<T> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back().map(|node| node.value)
+    }
 }
 
+/// Iterator over values in insert order.
+#[derive(Debug)]
+pub struct Values<'a, T: 'a>(slice::Iter<'a, Node<T>>);
+impl<'a, T: 'a> Clone for Values<'a, T> {
+    fn clone(&self) -> Self {
+        Values(self.0.clone())
+    }
+}
+impl<'a, T: 'a> ExactSizeIterator for Values<'a, T> { }
 impl<'a, T: 'a> Iterator for Values<'a, T> {
     type Item = &'a T;
-
-    fn next(&mut self) -> Option<&'a T> {
-        self.inner.next().map(|n| &n.value)
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|node| &node.value)
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+impl<'a, T: 'a> DoubleEndedIterator for Values<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back().map(|node| &node.value)
     }
 }
 
-impl<'a, T: 'a> fmt::Debug for Values<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("Values").finish()
-    }
-}
-
-/// Mutable iterator over node values.
-pub struct ValuesMut<'a, T: 'a> {
-    inner: slice::IterMut<'a, Node<T>>,
-}
-
+/// Mutable iterator over values in insert order.
+#[derive(Debug)]
+pub struct ValuesMut<'a, T: 'a>(slice::IterMut<'a, Node<T>>);
+impl<'a, T: 'a> ExactSizeIterator for ValuesMut<'a, T> { }
 impl<'a, T: 'a> Iterator for ValuesMut<'a, T> {
     type Item = &'a mut T;
-
-    fn next(&mut self) -> Option<&'a mut T> {
-        self.inner.next().map(|n| &mut n.value)
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|node| &mut node.value)
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+impl<'a, T: 'a> DoubleEndedIterator for ValuesMut<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back().map(|node| &mut node.value)
     }
 }
 
-impl<'a, T: 'a> fmt::Debug for ValuesMut<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("ValuesMut").finish()
-    }
-}
-
-/// Iterator that moves node values out of a tree.
-pub struct IntoValues<T> {
-    inner: vec::IntoIter<Node<T>>,
-}
-
-impl<T> Iterator for IntoValues<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        self.inner.next().map(|n| n.value)
-    }
-}
-
-impl<T> fmt::Debug for IntoValues<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("IntoValues").finish()
-    }
-}
-
-/// Iterator over all nodes.
+/// Iterator over nodes in insert order.
+#[derive(Debug)]
 pub struct Nodes<'a, T: 'a> {
     tree: &'a Tree<T>,
-    inner: iter::Enumerate<slice::Iter<'a, Node<T>>>,
+    iter: Range<usize>,
 }
-
+impl<'a, T: 'a> Clone for Nodes<'a, T> {
+    fn clone(&self) -> Self {
+        Self { tree: self.tree, iter: self.iter.clone() }
+    }
+}
+impl<'a, T: 'a> ExactSizeIterator for Nodes<'a, T> { }
 impl<'a, T: 'a> Iterator for Nodes<'a, T> {
     type Item = NodeRef<'a, T>;
-
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
-        self.inner.next().map(|(index, node)| {
-            NodeRef {
-                tree: self.tree,
-                node: node,
-                index: index,
-            }
-        })
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|i| self.tree.node_ref(Id(i)))
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+impl<'a, T: 'a> DoubleEndedIterator for Nodes<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back().map(|i| self.tree.node_ref(Id(i)))
     }
 }
 
-impl<'a, T: 'a + fmt::Debug> fmt::Debug for Nodes<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("Nodes")
-            .field("tree", &self.tree)
-            .finish()
+impl<T> IntoIterator for Tree<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter(self.vec.into_iter())
     }
 }
 
 impl<T> Tree<T> {
-    /// Returns an iterator over node values in creation order.
+    /// Returns an iterator over values in insert order.
     pub fn values(&self) -> Values<T> {
-        Values { inner: self.vec.iter() }
+        Values(self.vec.iter())
     }
 
-    /// Returns a mutable iterator over node values in creation order.
+    /// Returns a mutable iterator over values in insert order.
     pub fn values_mut(&mut self) -> ValuesMut<T> {
-        ValuesMut { inner: self.vec.iter_mut() }
+        ValuesMut(self.vec.iter_mut())
     }
 
-    /// Returns an iterator that moves node values out of the tree in creation order.
-    pub fn into_values(self) -> IntoValues<T> {
-        IntoValues { inner: self.vec.into_iter() }
-    }
-
-    /// Returns an iterator over all nodes, including orphans, in creation order.
+    /// Returns an iterator over nodes in insert order.
     pub fn nodes(&self) -> Nodes<T> {
-        Nodes {
-            tree: self,
-            inner: self.vec.iter().enumerate(),
-        }
+        Nodes { tree: self, iter: 0..self.vec.len() }
     }
 }
 
@@ -122,61 +122,55 @@ macro_rules! axis_iterators {
         $(
             #[$m]
             #[derive(Debug)]
-            pub struct $i<'a, T: 'a> {
-                node: Option<NodeRef<'a, T>>,
+            pub struct $i<'a, T: 'a>(Option<NodeRef<'a, T>>);
+            impl<'a, T: 'a> Clone for $i<'a, T> {
+                fn clone(&self) -> Self {
+                    $i(self.0)
+                }
             }
-
             impl<'a, T: 'a> Iterator for $i<'a, T> {
                 type Item = NodeRef<'a, T>;
-
-                fn next(&mut self) -> Option<NodeRef<'a, T>> {
-                    let node = self.node.take();
-                    self.node = node.as_ref().and_then($f);
+                fn next(&mut self) -> Option<Self::Item> {
+                    let node = self.0.take();
+                    self.0 = node.as_ref().and_then($f);
                     node
                 }
             }
-
-            impl<'a, T: 'a> Copy for $i<'a, T> { }
-            impl<'a, T: 'a> Clone for $i<'a, T> {
-                fn clone(&self) -> Self { *self }
-            }
-
-            impl<'a, T: 'a> Eq for $i<'a, T> { }
-            impl<'a, T: 'a> PartialEq for $i<'a, T> {
-                fn eq(&self, other: &Self) -> bool { self.node == other.node }
-            }
         )*
-    }
+    };
 }
 
 axis_iterators! {
-    #[doc = "Iterator over node ancestors."]
+    /// Iterator over ancestors.
     Ancestors(NodeRef::parent);
 
-    #[doc = "Iterator over node previous siblings."]
+    /// Iterator over previous siblings.
     PrevSiblings(NodeRef::prev_sibling);
 
-    #[doc = "Iterator over node next siblings."]
+    /// Iterator over next siblings.
     NextSiblings(NodeRef::next_sibling);
 
-    #[doc = "Iterator over node first children."]
+    /// Iterator over first children.
     FirstChildren(NodeRef::first_child);
 
-    #[doc = "Iterator over node last children."]
+    /// Iterator over last children.
     LastChildren(NodeRef::last_child);
 }
 
-/// Iterator over node children.
+/// Iterator over children.
 #[derive(Debug)]
 pub struct Children<'a, T: 'a> {
     front: Option<NodeRef<'a, T>>,
     back: Option<NodeRef<'a, T>>,
 }
-
+impl<'a, T: 'a> Clone for Children<'a, T> {
+    fn clone(&self) -> Self {
+        Self { front: self.front.clone(), back: self.back.clone() }
+    }
+}
 impl<'a, T: 'a> Iterator for Children<'a, T> {
     type Item = NodeRef<'a, T>;
-
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
+    fn next(&mut self) -> Option<Self::Item> {
         if self.front == self.back {
             let node = self.front.take();
             self.back = None;
@@ -188,10 +182,9 @@ impl<'a, T: 'a> Iterator for Children<'a, T> {
         }
     }
 }
-
 impl<'a, T: 'a> DoubleEndedIterator for Children<'a, T> {
-    fn next_back(&mut self) -> Option<NodeRef<'a, T>> {
-        if self.front == self.back {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.back == self.front {
             let node = self.back.take();
             self.front = None;
             node
@@ -203,33 +196,18 @@ impl<'a, T: 'a> DoubleEndedIterator for Children<'a, T> {
     }
 }
 
-impl<'a, T: 'a> Copy for Children<'a, T> { }
-impl<'a, T: 'a> Clone for Children<'a, T> {
-    fn clone(&self) -> Self { *self }
-}
-
-impl<'a, T: 'a> Eq for Children<'a, T> { }
-impl<'a, T: 'a> PartialEq for Children<'a, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.front == other.front && self.back == other.back
-    }
-}
-
-/// An open or close edge of a node.
+/// Open or close edge of a node.
 #[derive(Debug)]
 pub enum Edge<'a, T: 'a> {
     /// Open.
     Open(NodeRef<'a, T>),
-
     /// Close.
     Close(NodeRef<'a, T>),
 }
-
 impl<'a, T: 'a> Copy for Edge<'a, T> { }
 impl<'a, T: 'a> Clone for Edge<'a, T> {
     fn clone(&self) -> Self { *self }
 }
-
 impl<'a, T: 'a> Eq for Edge<'a, T> { }
 impl<'a, T: 'a> PartialEq for Edge<'a, T> {
     fn eq(&self, other: &Self) -> bool {
@@ -248,11 +226,14 @@ pub struct Traverse<'a, T: 'a> {
     root: NodeRef<'a, T>,
     edge: Option<Edge<'a, T>>,
 }
-
+impl<'a, T: 'a> Clone for Traverse<'a, T> {
+    fn clone(&self) -> Self {
+        Self { root: self.root, edge: self.edge }
+    }
+}
 impl<'a, T: 'a> Iterator for Traverse<'a, T> {
     type Item = Edge<'a, T>;
-
-    fn next(&mut self) -> Option<Edge<'a, T>> {
+    fn next(&mut self) -> Option<Self::Item> {
         match self.edge {
             None => {
                 self.edge = Some(Edge::Open(self.root));
@@ -266,7 +247,7 @@ impl<'a, T: 'a> Iterator for Traverse<'a, T> {
             },
             Some(Edge::Close(node)) => {
                 if node == self.root {
-                    self.edge = None;
+                     self.edge = None;
                 } else if let Some(next_sibling) = node.next_sibling() {
                     self.edge = Some(Edge::Open(next_sibling));
                 } else {
@@ -278,80 +259,58 @@ impl<'a, T: 'a> Iterator for Traverse<'a, T> {
     }
 }
 
-impl<'a, T: 'a> Copy for Traverse<'a, T> { }
-impl<'a, T: 'a> Clone for Traverse<'a, T> {
-    fn clone(&self) -> Self { *self }
-}
-
-impl<'a, T: 'a> Eq for Traverse<'a, T> { }
-impl<'a, T: 'a> PartialEq for Traverse<'a, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.root == other.root && self.edge == other.edge
-    }
-}
-
-/// Iterator over node and its descendants.
+/// Iterator over a node and its descendants.
 #[derive(Debug)]
 pub struct Descendants<'a, T: 'a>(Traverse<'a, T>);
-
-impl<'a, T: 'a> Iterator for Descendants<'a, T> {
-    type Item = NodeRef<'a, T>;
-
-    fn next(&mut self) -> Option<NodeRef<'a, T>> {
-        loop {
-            match self.0.next() {
-                Some(Edge::Open(node)) => return Some(node),
-                Some(Edge::Close(_)) => {}
-                None => return None
-            }
-        }
+impl<'a, T: 'a> Clone for Descendants<'a, T> {
+    fn clone(&self) -> Self {
+        Descendants(self.0.clone())
     }
 }
-
-impl<'a, T: 'a> Copy for Descendants<'a, T> { }
-impl<'a, T: 'a> Clone for Descendants<'a, T> {
-    fn clone(&self) -> Self { *self }
-}
-
-impl<'a, T: 'a> Eq for Descendants<'a, T> { }
-impl<'a, T: 'a> PartialEq for Descendants<'a, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+impl<'a, T: 'a> Iterator for Descendants<'a, T> {
+    type Item = NodeRef<'a, T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        for edge in &mut self.0 {
+            if let Edge::Open(node) = edge {
+                return Some(node);
+            }
+        }
+        None
     }
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
-    /// Returns an iterator over this node's ancestors.
+    /// Returns an iterator over ancestors.
     pub fn ancestors(&self) -> Ancestors<'a, T> {
-        Ancestors { node: self.parent() }
+        Ancestors(self.parent())
     }
 
-    /// Returns an iterator over this node's previous siblings.
+    /// Returns an iterator over previous siblings.
     pub fn prev_siblings(&self) -> PrevSiblings<'a, T> {
-        PrevSiblings { node: self.prev_sibling() }
+        PrevSiblings(self.prev_sibling())
     }
 
-    /// Returns an iterator over this node's next siblings.
+    /// Returns an iterator over next siblings.
     pub fn next_siblings(&self) -> NextSiblings<'a, T> {
-        NextSiblings { node: self.next_sibling() }
+        NextSiblings(self.next_sibling())
     }
 
-    /// Returns an iterator over this node's children.
+    /// Returns an iterator over first children.
+    pub fn first_children(&self) -> FirstChildren<'a, T> {
+        FirstChildren(self.first_child())
+    }
+
+    /// Returns an iterator over last children.
+    pub fn last_children(&self) -> LastChildren<'a, T> {
+        LastChildren(self.last_child())
+    }
+
+    /// Returns an iterator over children.
     pub fn children(&self) -> Children<'a, T> {
         Children {
             front: self.first_child(),
             back: self.last_child(),
         }
-    }
-
-    /// Returns an iterator over this node's first children.
-    pub fn first_children(&self) -> FirstChildren<'a, T> {
-        FirstChildren { node: self.first_child() }
-    }
-
-    /// Returns an iterator over this node's last children.
-    pub fn last_children(&self) -> LastChildren<'a, T> {
-        LastChildren { node: self.last_child() }
     }
 
     /// Returns an iterator which traverses the subtree starting at this node.
@@ -364,9 +323,6 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 
     /// Returns an iterator over this node and its descendants.
     pub fn descendants(&self) -> Descendants<'a, T> {
-        Descendants(Traverse {
-            root: *self,
-            edge: None,
-        })
+        Descendants(self.traverse())
     }
 }

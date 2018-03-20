@@ -10,7 +10,7 @@ fn value() {
 #[test]
 fn id() {
     let tree = tree!('a');
-    assert_eq!(tree.root(), tree.get(tree.root().id()));
+    assert_eq!(tree.root(), unsafe { tree.get(tree.root().id()) });
 }
 
 #[test]

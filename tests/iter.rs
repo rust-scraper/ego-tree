@@ -2,6 +2,15 @@
 extern crate ego_tree;
 
 #[test]
+fn into_iter() {
+    let tree = tree!('a' => { 'b', 'c', 'd' });
+    assert_eq!(
+        vec!['a', 'b', 'c', 'd'],
+        tree.into_iter().collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn values() {
     let tree = tree!('a' => { 'b', 'c', 'd' });
     assert_eq!(
@@ -24,15 +33,6 @@ fn values_mut() {
     assert_eq!(
         vec![&'A', &'B', &'C', &'D'],
         tree.values().collect::<Vec<_>>()
-    );
-}
-
-#[test]
-fn into_values() {
-    let tree = tree!('a' => { 'b', 'c', 'd' });
-    assert_eq!(
-        vec!['a', 'b', 'c', 'd'],
-        tree.into_values().collect::<Vec<_>>()
     );
 }
 

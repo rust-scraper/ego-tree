@@ -4,13 +4,6 @@ extern crate ego_tree;
 use ego_tree::Tree;
 
 #[test]
-fn empty() {
-    let macro_tree: Tree<i32> = tree!();
-    let manual_tree: Tree<i32> = Tree::default();
-    assert_eq!(manual_tree, macro_tree);
-}
-
-#[test]
 fn root() {
     let macro_tree = tree!('a');
     let manual_tree = Tree::new('a');

@@ -13,7 +13,7 @@ fn value() {
 fn id() {
     let mut tree = tree!('a');
     let id = tree.root_mut().id();
-    assert_eq!(id, tree.get_mut(id).id());
+    assert_eq!(id, unsafe { tree.get_mut(id).id() });
 }
 
 #[test]
