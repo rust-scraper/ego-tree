@@ -35,7 +35,6 @@
     missing_copy_implementations,
 )]
 
-use std::marker::PhantomData;
 use std::fmt::{self, Debug, Formatter};
 
 /// Vec-backed ID-tree.
@@ -46,15 +45,18 @@ pub struct Tree<T> {
     vec: Vec<Node<T>>,
 }
 
+/// Node ID.
+///
+/// Index into a `Tree`-internal `Vec`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Id(usize);
+pub struct NodeId(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Node<T> {
-    parent: Option<Id>,
-    prev_sibling: Option<Id>,
-    next_sibling: Option<Id>,
-    children: Option<(Id, Id)>,
+    parent: Option<NodeId>,
+    prev_sibling: Option<NodeId>,
+    next_sibling: Option<NodeId>,
+    children: Option<(NodeId, NodeId)>,
     value: T,
 }
 
@@ -73,26 +75,23 @@ impl<T> Node<T> {
 /// Node reference.
 #[derive(Debug)]
 pub struct NodeRef<'a, T: 'a> {
-    id: Id,
-    tree: &'a Tree<T>,
+    /// Node ID.
+    pub id: NodeId,
+
+    /// Tree containing the node.
+    pub tree: &'a Tree<T>,
+
     node: &'a Node<T>,
 }
 
 /// Node mutator.
 #[derive(Debug)]
 pub struct NodeMut<'a, T: 'a> {
-    id: Id,
-    tree: &'a mut Tree<T>,
-}
+    /// Node ID.
+    pub id: NodeId,
 
-/// Opaque node ID.
-///
-/// Acts as a weak reference not tied to the lifetime of the tree. Using a
-/// `NodeId` is therefore unsafe.
-#[derive(Debug)]
-pub struct NodeId<T> {
-    id: Id,
-    marker: PhantomData<T>,
+    /// Tree containing the node.
+    pub tree: &'a mut Tree<T>,
 }
 
 // Trait implementations regardless of T.
@@ -102,30 +101,12 @@ impl<'a, T: 'a> Clone for NodeRef<'a, T> {
     fn clone(&self) -> Self { *self }
 }
 
-impl<T> Copy for NodeId<T> { }
-impl<T> Clone for NodeId<T> {
-    fn clone(&self) -> Self { *self }
-}
-
 impl<'a, T: 'a> Eq for NodeRef<'a, T> { }
 impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.tree as *const _ == other.tree as *const _
             && self.node as *const _ == other.node as *const _
-    }
-}
-
-impl<T> Eq for NodeId<T> { }
-impl<T> PartialEq for NodeId<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl<T> std::hash::Hash for NodeId<T> {
-    fn hash<H>(&self, state: &mut H) where H: std::hash::Hasher {
-        std::hash::Hash::hash(&self.id, state)
     }
 }
 
@@ -142,47 +123,50 @@ impl<T> Tree<T> {
         Tree { vec }
     }
 
-    fn get_node(&self, id: Id) -> &Node<T> {
-        unsafe { self.vec.get_unchecked(id.0) }
+    /// Returns a reference to the specified node.
+    pub fn get(&self, id: NodeId) -> Option<NodeRef<T>> {
+        self.vec.get(id.0).map(|node| NodeRef { id, node, tree: self })
     }
 
-    fn get_node_mut(&mut self, id: Id) -> &mut Node<T> {
-        unsafe { self.vec.get_unchecked_mut(id.0) }
+    /// Returns a mutator of the specified node.
+    pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<T>> {
+        let exists = self.vec.get(id.0).map(|_| ());
+        exists.map(move |_| NodeMut { id, tree: self })
     }
 
-    fn node_ref(&self, id: Id) -> NodeRef<T> {
-        NodeRef { id, tree: self, node: self.get_node(id) }
+    unsafe fn node(&self, id: NodeId) -> &Node<T> {
+        self.vec.get_unchecked(id.0)
     }
 
-    fn node_mut(&mut self, id: Id) -> NodeMut<T> {
+    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
+        self.vec.get_unchecked_mut(id.0)
+    }
+
+    /// Returns a reference to the specified node.
+    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<T> {
+        NodeRef { id, node: self.node(id), tree: self }
+    }
+
+    /// Returns a mutator of the specified node.
+    pub unsafe fn get_unchecked_mut(&mut self, id: NodeId) -> NodeMut<T> {
         NodeMut { id, tree: self }
     }
 
     /// Returns a reference to the root node.
     pub fn root(&self) -> NodeRef<T> {
-        self.node_ref(Id(0))
+        unsafe { self.get_unchecked(NodeId(0)) }
     }
 
     /// Returns a mutator of the root node.
     pub fn root_mut(&mut self) -> NodeMut<T> {
-        self.node_mut(Id(0))
+        unsafe { self.get_unchecked_mut(NodeId(0)) }
     }
 
     /// Creates an orphan node.
     pub fn orphan(&mut self, value: T) -> NodeMut<T> {
-        let id = Id(self.vec.len());
+        let id = NodeId(self.vec.len());
         self.vec.push(Node::new(value));
-        self.node_mut(id)
-    }
-
-    /// Returns a reference to the specified node.
-    pub unsafe fn get(&self, id: NodeId<T>) -> NodeRef<T> {
-        self.node_ref(id.id)
-    }
-
-    /// Returns a mutator of the specified node.
-    pub unsafe fn get_mut(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        self.node_mut(id.id)
+        unsafe { self.get_unchecked_mut(id) }
     }
 }
 
@@ -192,39 +176,29 @@ impl<'a, T: 'a> NodeRef<'a, T> {
         &self.node.value
     }
 
-    /// Returns the tree containing this node.
-    pub fn tree(&self) -> &'a Tree<T> {
-        self.tree
-    }
-
-    /// Returns the ID of this node.
-    pub fn id(&self) -> NodeId<T> {
-        NodeId { id: self.id, marker: PhantomData }
-    }
-
     /// Returns the parent of this node.
     pub fn parent(&self) -> Option<Self> {
-        self.node.parent.map(|id| self.tree.node_ref(id))
+        self.node.parent.map(|id| unsafe { self.tree.get_unchecked(id) })
     }
 
     /// Returns the previous sibling of this node.
     pub fn prev_sibling(&self) -> Option<Self> {
-        self.node.prev_sibling.map(|id| self.tree.node_ref(id))
+        self.node.prev_sibling.map(|id| unsafe { self.tree.get_unchecked(id) })
     }
 
     /// Returns the next sibling of this node.
     pub fn next_sibling(&self) -> Option<Self> {
-        self.node.next_sibling.map(|id| self.tree.node_ref(id))
+        self.node.next_sibling.map(|id| unsafe { self.tree.get_unchecked(id) })
     }
 
     /// Returns the first child of this node.
     pub fn first_child(&self) -> Option<Self> {
-        self.node.children.map(|(id, _)| self.tree.node_ref(id))
+        self.node.children.map(|(id, _)| unsafe { self.tree.get_unchecked(id) })
     }
 
     /// Returns the last child of this node.
     pub fn last_child(&self) -> Option<Self> {
-        self.node.children.map(|(_, id)| self.tree.node_ref(id))
+        self.node.children.map(|(_, id)| unsafe { self.tree.get_unchecked(id) })
     }
 
     /// Returns true if this node has siblings.
@@ -239,72 +213,65 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 }
 
 impl<'a, T: 'a> NodeMut<'a, T> {
+    fn node(&mut self) -> &mut Node<T> {
+        unsafe { self.tree.node_mut(self.id) }
+    }
+
     /// Returns the value of this node.
     pub fn value(&mut self) -> &mut T {
-        &mut self.tree.get_node_mut(self.id).value
-    }
-
-    /// Returns the tree containing this node.
-    pub fn tree(&mut self) -> &mut Tree<T> {
-        self.tree
-    }
-
-    /// Returns the ID of this node.
-    pub fn id(&self) -> NodeId<T> {
-        NodeId { id: self.id, marker: PhantomData }
+        &mut self.node().value
     }
 
     /// Returns the parent of this node.
     pub fn parent(&mut self) -> Option<NodeMut<T>> {
-        let id = self.tree.get_node(self.id).parent;
-        id.map(move |id| self.tree.node_mut(id))
+        let id = self.node().parent;
+        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
     /// Returns the previous sibling of this node.
     pub fn prev_sibling(&mut self) -> Option<NodeMut<T>> {
-        let id = self.tree.get_node(self.id).prev_sibling;
-        id.map(move |id| self.tree.node_mut(id))
+        let id = self.node().prev_sibling;
+        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
     /// Returns the next sibling of this node.
     pub fn next_sibling(&mut self) -> Option<NodeMut<T>> {
-        let id = self.tree.get_node(self.id).next_sibling;
-        id.map(move |id| self.tree.node_mut(id))
+        let id = self.node().next_sibling;
+        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
     /// Returns the first child of this node.
     pub fn first_child(&mut self) -> Option<NodeMut<T>> {
-        let ids = self.tree.get_node(self.id).children;
-        ids.map(move |(id, _)| self.tree.node_mut(id))
+        let ids = self.node().children;
+        ids.map(move |(id, _)| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
     /// Returns the last child of this node.
     pub fn last_child(&mut self) -> Option<NodeMut<T>> {
-        let ids = self.tree.get_node(self.id).children;
-        ids.map(move |(_, id)| self.tree.node_mut(id))
+        let ids = self.node().children;
+        ids.map(move |(_, id)| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
     /// Returns true if this node has siblings.
     pub fn has_siblings(&self) -> bool {
-        let node = self.tree.get_node(self.id);
-        node.prev_sibling.is_some() || node.next_sibling.is_some()
+        unsafe { self.tree.get_unchecked(self.id).has_siblings() }
     }
 
     /// Returns true if this node has children.
     pub fn has_children(&self) -> bool {
-        self.tree.get_node(self.id).children.is_some()
+        unsafe { self.tree.get_unchecked(self.id).has_children() }
     }
 
     /// Appends a new child to this node.
     pub fn append(&mut self, value: T) -> NodeMut<T> {
-        let id = self.tree.orphan(value).id();
-        unsafe { self.append_id(id) }
+        let id = self.tree.orphan(value).id;
+        self.append_id(id)
     }
 
     /// Prepends a new child to this node.
     pub fn prepend(&mut self, value: T) -> NodeMut<T> {
-        let id = self.tree.orphan(value).id();
-        unsafe { self.prepend_id(id) }
+        let id = self.tree.orphan(value).id;
+        self.prepend_id(id)
     }
 
     /// Inserts a new sibling before this node.
@@ -313,8 +280,8 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if this node is an orphan.
     pub fn insert_before(&mut self, value: T) -> NodeMut<T> {
-        let id = self.tree.orphan(value).id();
-        unsafe { self.insert_id_before(id) }
+        let id = self.tree.orphan(value).id;
+        self.insert_id_before(id)
     }
 
     /// Inserts a new sibling after this node.
@@ -323,33 +290,33 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if this node is an orphan.
     pub fn insert_after(&mut self, value: T) -> NodeMut<T> {
-        let id = self.tree.orphan(value).id();
-        unsafe { self.insert_id_after(id) }
+        let id = self.tree.orphan(value).id;
+        self.insert_id_after(id)
     }
 
     /// Detaches this node from its parent.
     pub fn detach(&mut self) {
-        let (parent_id, prev_sibling_id, next_sibling_id) = {
-            let node = self.tree.get_node(self.id);
-            let parent = match node.parent { Some(id) => id, None => return };
-            (parent, node.prev_sibling, node.next_sibling)
+        let parent_id = match self.node().parent {
+            Some(id) => id,
+            None => return,
         };
+        let prev_sibling_id = self.node().prev_sibling;
+        let next_sibling_id = self.node().next_sibling;
 
         {
-            let node = self.tree.get_node_mut(self.id);
-            node.parent = None;
-            node.prev_sibling = None;
-            node.next_sibling = None;
+            self.node().parent = None;
+            self.node().prev_sibling = None;
+            self.node().next_sibling = None;
         }
 
         if let Some(id) = prev_sibling_id {
-            self.tree.get_node_mut(id).next_sibling = next_sibling_id;
+            unsafe { self.tree.node_mut(id).next_sibling = next_sibling_id; }
         }
         if let Some(id) = next_sibling_id {
-            self.tree.get_node_mut(id).prev_sibling = prev_sibling_id;
+            unsafe { self.tree.node_mut(id).prev_sibling = prev_sibling_id; }
         }
 
-        let parent = self.tree.get_node_mut(parent_id);
+        let parent = unsafe { self.tree.node_mut(parent_id) };
         let (first_child_id, last_child_id) = parent.children.unwrap();
         if first_child_id == last_child_id {
             parent.children = None;
@@ -361,177 +328,201 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Appends a child to this node.
-    pub unsafe fn append_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        let new_child_id = id.id;
-        let last_child_id = self.tree.get_node(self.id).children.map(|(_, id)| id);
-
+    ///
+    /// # Panics
+    ///
+    /// Panics if `new_child_id` is not valid.
+    pub fn append_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+        let last_child_id = self.node().children.map(|(_, id)| id);
         {
-            let new_child = self.tree.get_node_mut(new_child_id);
-            new_child.parent = Some(self.id);
-            new_child.prev_sibling = last_child_id;
+            let mut new_child = self.tree.get_mut(new_child_id).unwrap();
+            new_child.detach();
+            new_child.node().parent = Some(self.id);
+            new_child.node().prev_sibling = last_child_id;
         }
 
         if let Some(id) = last_child_id {
-            self.tree.get_node_mut(id).next_sibling = Some(new_child_id);
+            unsafe { self.tree.node_mut(id).next_sibling = Some(new_child_id); }
         }
 
         {
-            let node = self.tree.get_node_mut(self.id);
-            if let Some((first_child_id, _)) = node.children {
-                node.children = Some((first_child_id, new_child_id));
+            if let Some((first_child_id, _)) = self.node().children {
+                self.node().children = Some((first_child_id, new_child_id));
             } else {
-                node.children = Some((new_child_id, new_child_id));
+                self.node().children = Some((new_child_id, new_child_id));
             }
         }
 
-        self.tree.node_mut(new_child_id)
+        unsafe { self.tree.get_unchecked_mut(new_child_id) }
     }
 
     /// Prepends a child to this node.
-    pub unsafe fn prepend_id(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        let new_child_id = id.id;
-        let first_child_id = self.tree.get_node(self.id).children.map(|(id, _)| id);
-
+    ///
+    /// # Panics
+    ///
+    /// Panics if `new_child_id` is not valid.
+    pub fn prepend_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+        let first_child_id = self.node().children.map(|(id, _)| id);
         {
-            let new_child = self.tree.get_node_mut(new_child_id);
-            new_child.parent = Some(self.id);
-            new_child.next_sibling = first_child_id;
+            let mut new_child = self.tree.get_mut(new_child_id).unwrap();
+            new_child.detach();
+            new_child.node().parent = Some(self.id);
+            new_child.node().next_sibling = first_child_id;
         }
 
         if let Some(id) = first_child_id {
-            self.tree.get_node_mut(id).prev_sibling = Some(new_child_id);
+            unsafe { self.tree.node_mut(id).prev_sibling = Some(new_child_id); }
         }
 
         {
-            let node = self.tree.get_node_mut(self.id);
-            if let Some((_, last_child_id)) = node.children {
-                node.children = Some((new_child_id, last_child_id));
+            if let Some((_, last_child_id)) = self.node().children {
+                self.node().children = Some((new_child_id, last_child_id));
             } else {
-                node.children = Some((new_child_id, new_child_id));
+                self.node().children = Some((new_child_id, new_child_id));
             }
         }
 
-        self.tree.node_mut(new_child_id)
+        unsafe { self.tree.get_unchecked_mut(new_child_id) }
     }
 
     /// Inserts a sibling before this node.
     ///
     /// # Panics
     ///
-    /// Panics if this node is an orphan.
-    pub unsafe fn insert_id_before(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        let new_sibling_id = id.id;
-        let parent_id = self.tree.get_node(self.id).parent.unwrap();
-        let prev_sibling_id = self.tree.get_node(self.id).prev_sibling;
+    /// - Panics if `new_sibling_id` is not valid.
+    /// - Panics if this node is an orphan.
+    pub fn insert_id_before(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+        let parent_id = self.node().parent.unwrap();
+        let prev_sibling_id = self.node().prev_sibling;
 
         {
-            let new_sibling = self.tree.get_node_mut(new_sibling_id);
-            new_sibling.parent = Some(parent_id);
-            new_sibling.prev_sibling = prev_sibling_id;
-            new_sibling.next_sibling = Some(self.id);
+            let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
+            new_sibling.node().parent = Some(parent_id);
+            new_sibling.node().prev_sibling = prev_sibling_id;
+            new_sibling.node().next_sibling = Some(self.id);
         }
 
         if let Some(id) = prev_sibling_id {
-            self.tree.get_node_mut(id).next_sibling = Some(new_sibling_id);
+            unsafe { self.tree.node_mut(id).next_sibling = Some(new_sibling_id); }
         }
 
-        self.tree.get_node_mut(self.id).prev_sibling = Some(new_sibling_id);
+        self.node().prev_sibling = Some(new_sibling_id);
 
         {
-            let parent = self.tree.get_node_mut(parent_id);
+            let parent = unsafe { self.tree.node_mut(parent_id) };
             let (first_child_id, last_child_id) = parent.children.unwrap();
             if first_child_id == self.id {
                 parent.children = Some((new_sibling_id, last_child_id));
             }
         }
 
-        self.tree.node_mut(new_sibling_id)
+        unsafe { self.tree.get_unchecked_mut(new_sibling_id) }
     }
 
     /// Inserts a sibling after this node.
     ///
     /// # Panics
     ///
-    /// Panics if this node is an orphan.
-    pub unsafe fn insert_id_after(&mut self, id: NodeId<T>) -> NodeMut<T> {
-        let new_sibling_id = id.id;
-        let parent_id = self.tree.get_node(self.id).parent.unwrap();
-        let next_sibling_id = self.tree.get_node(self.id).next_sibling;
+    /// - Panics if `new_sibling_id` is not valid.
+    /// - Panics if this node is an orphan.
+    pub fn insert_id_after(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+        let parent_id = self.node().parent.unwrap();
+        let next_sibling_id = self.node().next_sibling;
 
         {
-            let new_sibling = self.tree.get_node_mut(new_sibling_id);
-            new_sibling.parent = Some(parent_id);
-            new_sibling.prev_sibling = Some(self.id);
-            new_sibling.next_sibling = next_sibling_id;
+            let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
+            new_sibling.node().parent = Some(parent_id);
+            new_sibling.node().prev_sibling = Some(self.id);
+            new_sibling.node().next_sibling = next_sibling_id;
         }
 
         if let Some(id) = next_sibling_id {
-            self.tree.get_node_mut(id).prev_sibling = Some(new_sibling_id);
+            unsafe { self.tree.node_mut(id).prev_sibling = Some(new_sibling_id); }
         }
 
-        self.tree.get_node_mut(self.id).next_sibling = Some(new_sibling_id);
+        self.node().next_sibling = Some(new_sibling_id);
 
         {
-            let parent = self.tree.get_node_mut(parent_id);
+            let parent = unsafe { self.tree.node_mut(parent_id) };
             let (first_child_id, last_child_id) = parent.children.unwrap();
             if last_child_id == self.id {
                 parent.children = Some((first_child_id, new_sibling_id));
             }
         }
 
-        self.tree.node_mut(new_sibling_id)
+        unsafe { self.tree.get_unchecked_mut(new_sibling_id) }
     }
 
     /// Reparents the children of a node, appending them to this node.
-    pub unsafe fn reparent_from_id_append(&mut self, id: NodeId<T>) {
-        let new_child_ids = match self.tree.get_node_mut(id.id).children.take() {
-            Some(ids) => ids,
-            None => return,
+    ///
+    /// # Panics
+    ///
+    /// Panics if `from_id` is not valid.
+    pub fn reparent_from_id_append(&mut self, from_id: NodeId) {
+        let new_child_ids = {
+            let mut from = self.tree.get_mut(from_id).unwrap();
+            match from.node().children.take() {
+                Some(ids) => ids,
+                None => return,
+            }
         };
 
-        self.tree.get_node_mut(new_child_ids.0).parent = Some(self.id);
-        self.tree.get_node_mut(new_child_ids.1).parent = Some(self.id);
+        unsafe {
+            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
+            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        }
 
-        if self.tree.get_node(self.id).children.is_none() {
-            self.tree.get_node_mut(self.id).children = Some(new_child_ids);
+        if self.node().children.is_none() {
+            self.node().children = Some(new_child_ids);
             return;
         }
 
-        let old_child_ids = self.tree.get_node(self.id).children.unwrap();
-        self.tree.get_node_mut(old_child_ids.1).next_sibling = Some(new_child_ids.0);
-        self.tree.get_node_mut(new_child_ids.0).prev_sibling = Some(old_child_ids.1);
+        let old_child_ids = self.node().children.unwrap();
+        unsafe {
+            self.tree.node_mut(old_child_ids.1).next_sibling = Some(new_child_ids.0);
+            self.tree.node_mut(new_child_ids.0).prev_sibling = Some(old_child_ids.1);
+        }
 
-        self.tree.get_node_mut(self.id).children =
-            Some((old_child_ids.0, new_child_ids.1));
+        self.node().children = Some((old_child_ids.0, new_child_ids.1));
     }
 
     /// Reparents the children of a node, prepending them to this node.
-    pub unsafe fn reparent_from_id_prepend(&mut self, id: NodeId<T>) {
-        let new_child_ids = match self.tree.get_node_mut(id.id).children.take() {
-            Some(ids) => ids,
-            None => return,
+    ///
+    /// # Panics
+    ///
+    /// Panics if `from_id` is not valid.
+    pub fn reparent_from_id_prepend(&mut self, from_id: NodeId) {
+        let new_child_ids = {
+            let mut from = self.tree.get_mut(from_id).unwrap();
+            match from.node().children.take() {
+                Some(ids) => ids,
+                None => return,
+            }
         };
 
-        self.tree.get_node_mut(new_child_ids.0).parent = Some(self.id);
-        self.tree.get_node_mut(new_child_ids.1).parent = Some(self.id);
+        unsafe {
+            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
+            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        }
 
-        if self.tree.get_node(self.id).children.is_none() {
-            self.tree.get_node_mut(self.id).children = Some(new_child_ids);
+        if self.node().children.is_none() {
+            self.node().children = Some(new_child_ids);
             return;
         }
 
-        let old_child_ids = self.tree.get_node(self.id).children.unwrap();
-        self.tree.get_node_mut(old_child_ids.0).prev_sibling = Some(new_child_ids.1);
-        self.tree.get_node_mut(new_child_ids.1).next_sibling = Some(old_child_ids.0);
+        let old_child_ids = self.node().children.unwrap();
+        unsafe {
+            self.tree.node_mut(old_child_ids.0).prev_sibling = Some(new_child_ids.1);
+            self.tree.node_mut(new_child_ids.1).next_sibling = Some(old_child_ids.0);
+        }
 
-        self.tree.get_node_mut(self.id).children =
-            Some((new_child_ids.0, old_child_ids.1))
+        self.node().children = Some((new_child_ids.0, old_child_ids.1));
     }
 }
 
 impl<'a, T: 'a> From<NodeMut<'a, T>> for NodeRef<'a, T> {
     fn from(node: NodeMut<'a, T>) -> Self {
-        node.tree.node_ref(node.id)
+        unsafe { node.tree.get_unchecked(node.id) }
     }
 }
 
