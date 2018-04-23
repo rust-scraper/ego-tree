@@ -8,12 +8,6 @@ fn value() {
 }
 
 #[test]
-fn id() {
-    let tree = tree!('a');
-    assert_eq!(tree.root(), unsafe { tree.get(tree.root().id()) });
-}
-
-#[test]
 fn parent() {
     let tree = tree!('a' => { 'b' });
     let b = tree.root().first_child().unwrap();
@@ -87,10 +81,4 @@ fn neq_tree() {
     let one = tree!('a');
     let two = one.clone();
     assert_eq!(one.root(), two.root());
-}
-
-#[test]
-fn tree() {
-    let tree = tree!('a');
-    assert_eq!(tree.root().tree(), &tree);
 }

@@ -10,13 +10,6 @@ fn value() {
 }
 
 #[test]
-fn id() {
-    let mut tree = tree!('a');
-    let id = tree.root_mut().id();
-    assert_eq!(id, unsafe { tree.get_mut(id).id() });
-}
-
-#[test]
 fn parent() {
     let mut tree = tree!('a' => { 'b' });
     assert_eq!(
@@ -305,8 +298,8 @@ fn reparent_from_id_append() {
             'e' => { 'f', 'g' },
         }
     };
-    let e_id = tree.root().last_child().unwrap().id();
-    unsafe { tree.root_mut().first_child().unwrap().reparent_from_id_append(e_id); }
+    let e_id = tree.root().last_child().unwrap().id;
+    tree.root_mut().first_child().unwrap().reparent_from_id_append(e_id);
 
     let b = tree.root().first_child().unwrap();
     let e = tree.root().last_child().unwrap();
@@ -329,8 +322,8 @@ fn reparent_from_id_prepend() {
             'e' => { 'c', 'd' },
         }
     };
-    let e_id = tree.root().last_child().unwrap().id();
-    unsafe { tree.root_mut().first_child().unwrap().reparent_from_id_prepend(e_id); }
+    let e_id = tree.root().last_child().unwrap().id;
+    tree.root_mut().first_child().unwrap().reparent_from_id_prepend(e_id);
 
     let b = tree.root().first_child().unwrap();
     let e = tree.root().last_child().unwrap();
@@ -350,20 +343,4 @@ fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();
     assert_eq!(&'a', node_ref.value());
-}
-
-#[test]
-fn tree() {
-    let mut tree = tree!('a');
-
-    {
-        let mut root = tree.root_mut();
-        let tree2 = root.tree();
-        tree2.root_mut().append('b');
-    }
-
-    let root = tree.root();
-    let child = root.first_child().unwrap();
-
-    assert_eq!(&'b', child.value());
 }

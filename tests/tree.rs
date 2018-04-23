@@ -37,15 +37,15 @@ fn orphan() {
 #[test]
 fn get() {
     let tree = Tree::new('a');
-    let id = tree.root().id();
-    assert_eq!(tree.root(), unsafe { tree.get(id) });
+    let id = tree.root().id;
+    assert_eq!(Some(tree.root()), tree.get(id));
 }
 
 #[test]
 fn get_mut() {
     let mut tree = Tree::new('a');
-    let id = tree.root().id();
-    assert_eq!(&'a', unsafe { tree.get_mut(id).value() });
+    let id = tree.root().id;
+    assert_eq!(Some('a'), tree.get_mut(id).map(|mut n| *n.value()));
 }
 
 #[test]
