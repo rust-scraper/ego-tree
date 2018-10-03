@@ -200,6 +200,47 @@ fn prepend_3() {
 }
 
 #[test]
+fn insert() {
+    let mut tree = tree!('a');
+    tree.root_mut().insert('c', 0);
+    tree.root_mut().insert('b', 0);
+    tree.root_mut().insert('d', 2);
+
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = b.next_sibling().unwrap();
+    let d = root.last_child().unwrap();
+
+    assert_eq!(&'b', b.value());
+    assert_eq!(&'c', c.value());
+    assert_eq!(&'d', d.value());
+    assert_eq!(Some(root), b.parent());
+    assert_eq!(Some(root), c.parent());
+    assert_eq!(Some(root), d.parent());
+    assert_eq!(None, b.prev_sibling());
+    assert_eq!(Some(c), b.next_sibling());
+    assert_eq!(Some(b), c.prev_sibling());
+    assert_eq!(Some(d), c.next_sibling());
+    assert_eq!(Some(c), d.prev_sibling());
+    assert_eq!(None, d.next_sibling());
+}
+
+#[test]
+#[should_panic]
+fn insert_should_panic_1() {
+    let mut tree = tree!('a');
+    tree.root_mut().insert('b', 1);
+}
+
+#[test]
+#[should_panic]
+fn insert_should_panic_2() {
+    let mut tree = tree!('a');
+    tree.root_mut().insert('b', 0);
+    tree.root_mut().insert('c', 2);
+}
+
+#[test]
 fn insert_before_first() {
     let mut tree = tree!('a' => { 'c' });
     tree.root_mut().first_child().unwrap().insert_before('b');
