@@ -41,6 +41,18 @@ fn last_child() {
 }
 
 #[test]
+fn index_of_child() {
+    let tree = tree!('a' => { 'b', 'c' });
+    let root = tree.root();
+    let b = root.first_child().unwrap();
+    let c = root.last_child().unwrap();
+    
+    assert_eq!(0, root.index_of_child(&b).unwrap());
+    assert_eq!(1, root.index_of_child(&c).unwrap());
+    assert!(root.index_of_child(&root).is_none());
+}
+
+#[test]
 fn has_siblings() {
     let tree = tree!('a' => { 'b', 'c' });
     assert_eq!(false, tree.root().has_siblings());

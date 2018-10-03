@@ -201,6 +201,16 @@ impl<'a, T: 'a> NodeRef<'a, T> {
         self.node.children.map(|(_, id)| unsafe { self.tree.get_unchecked(id) })
     }
 
+    /// Returns the index of the given child or None if child doesn't exist.
+    pub fn index_of_child(&self, child: &NodeRef<T>) -> Option<usize> {
+        for (i, ref each) in self.children().enumerate() {
+            if each == child {
+                return Some(i)
+            }
+        }
+        None
+    }
+
     /// Returns true if this node has siblings.
     pub fn has_siblings(&self) -> bool {
         self.node.prev_sibling.is_some() || self.node.next_sibling.is_some()
@@ -373,7 +383,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Panics if `new_child_id` or `index` are not valid.
     pub fn insert_id(&mut self, new_child_id: NodeId, index: usize) -> NodeMut<T> {
         if index == 0 {
-            return self.prepend_id(new_child_id)        
+            return self.prepend_id(new_child_id)
         }
 
         assert!(self.has_children(), "invalid index: {}", index);
@@ -386,7 +396,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             prev_child_id = children.nth(index - 1).map(|n| n.id).unwrap();
             next_child_id = children.next().map(|n| n.id);
         }
-    
+
         {
             let mut new_child = self.tree.get_mut(new_child_id).unwrap();
             new_child.detach();
