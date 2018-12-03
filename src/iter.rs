@@ -80,7 +80,7 @@ impl<'a, T: 'a> ExactSizeIterator for Nodes<'a, T> { }
 impl<'a, T: 'a> Iterator for Nodes<'a, T> {
     type Item = NodeRef<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| unsafe { self.tree.get_unchecked(NodeId(i)) })
+        self.iter.next().map(|i| unsafe { self.tree.get_unchecked(NodeId::from_index(i)) })
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
@@ -88,7 +88,7 @@ impl<'a, T: 'a> Iterator for Nodes<'a, T> {
 }
 impl<'a, T: 'a> DoubleEndedIterator for Nodes<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|i| unsafe { self.tree.get_unchecked(NodeId(i)) })
+        self.iter.next_back().map(|i| unsafe { self.tree.get_unchecked(NodeId::from_index(i)) })
     }
 }
 
