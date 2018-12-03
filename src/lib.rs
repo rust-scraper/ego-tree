@@ -60,6 +60,13 @@ struct Node<T> {
     value: T,
 }
 
+fn _static_assert_size_of_node() {
+    // "Instanciating" the generic `transmute` function without calling it
+    // still triggers the magic compile-time check
+    // that input and output types have the same `size_of()`.
+    let _ = std::mem::transmute::<Node<()>, [usize; 9]>;
+}
+
 impl<T> Node<T> {
     fn new(value: T) -> Self {
         Node {
