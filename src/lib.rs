@@ -36,6 +36,7 @@
 )]
 
 use std::fmt::{self, Debug, Formatter};
+use std::num::NonZeroUsize;
 
 /// Vec-backed ID-tree.
 ///
@@ -49,7 +50,20 @@ pub struct Tree<T> {
 ///
 /// Index into a `Tree`-internal `Vec`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NodeId(usize);
+pub struct NodeId(NonZeroUsize);
+
+impl NodeId {
+    // Safety: `n` must not equal `usize::MAX`.
+    // (This is never the case for `Vec::len()`, that would mean it owns
+    // the entire address space without leaving space for even the its pointer.)
+    unsafe fn from_index(n: usize) -> Self {
+        NodeId(NonZeroUsize::new_unchecked(n + 1))
+    }
+
+    fn to_index(self) -> usize {
+        self.0.get() - 1
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Node<T> {
@@ -64,7 +78,7 @@ fn _static_assert_size_of_node() {
     // "Instanciating" the generic `transmute` function without calling it
     // still triggers the magic compile-time check
     // that input and output types have the same `size_of()`.
-    let _ = std::mem::transmute::<Node<()>, [usize; 9]>;
+    let _ = std::mem::transmute::<Node<()>, [usize; 5]>;
 }
 
 impl<T> Node<T> {
@@ -132,21 +146,21 @@ impl<T> Tree<T> {
 
     /// Returns a reference to the specified node.
     pub fn get(&self, id: NodeId) -> Option<NodeRef<T>> {
-        self.vec.get(id.0).map(|node| NodeRef { id, node, tree: self })
+        self.vec.get(id.to_index()).map(|node| NodeRef { id, node, tree: self })
     }
 
     /// Returns a mutator of the specified node.
     pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<T>> {
-        let exists = self.vec.get(id.0).map(|_| ());
+        let exists = self.vec.get(id.to_index()).map(|_| ());
         exists.map(move |_| NodeMut { id, tree: self })
     }
 
     unsafe fn node(&self, id: NodeId) -> &Node<T> {
-        self.vec.get_unchecked(id.0)
+        self.vec.get_unchecked(id.to_index())
     }
 
     unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
-        self.vec.get_unchecked_mut(id.0)
+        self.vec.get_unchecked_mut(id.to_index())
     }
 
     /// Returns a reference to the specified node.
@@ -161,17 +175,17 @@ impl<T> Tree<T> {
 
     /// Returns a reference to the root node.
     pub fn root(&self) -> NodeRef<T> {
-        unsafe { self.get_unchecked(NodeId(0)) }
+        unsafe { self.get_unchecked(NodeId::from_index(0)) }
     }
 
     /// Returns a mutator of the root node.
     pub fn root_mut(&mut self) -> NodeMut<T> {
-        unsafe { self.get_unchecked_mut(NodeId(0)) }
+        unsafe { self.get_unchecked_mut(NodeId::from_index(0)) }
     }
 
     /// Creates an orphan node.
     pub fn orphan(&mut self, value: T) -> NodeMut<T> {
-        let id = NodeId(self.vec.len());
+        let id = unsafe { NodeId::from_index(self.vec.len()) };
         self.vec.push(Node::new(value));
         unsafe { self.get_unchecked_mut(id) }
     }
