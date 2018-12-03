@@ -76,10 +76,10 @@ impl<T> Node<T> {
 #[derive(Debug)]
 pub struct NodeRef<'a, T: 'a> {
     /// Node ID.
-    pub id: NodeId,
+    id: NodeId,
 
     /// Tree containing the node.
-    pub tree: &'a Tree<T>,
+    tree: &'a Tree<T>,
 
     node: &'a Node<T>,
 }
@@ -88,10 +88,10 @@ pub struct NodeRef<'a, T: 'a> {
 #[derive(Debug)]
 pub struct NodeMut<'a, T: 'a> {
     /// Node ID.
-    pub id: NodeId,
+    id: NodeId,
 
     /// Tree containing the node.
-    pub tree: &'a mut Tree<T>,
+    tree: &'a mut Tree<T>,
 }
 
 // Trait implementations regardless of T.
@@ -171,6 +171,16 @@ impl<T> Tree<T> {
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
+    /// Returns the ID of this node.
+    pub fn id(&self) -> NodeId {
+        self.id
+    }
+
+    /// Returns the tree owning this node.
+    pub fn tree(&self) -> &'a Tree<T> {
+        self.tree
+    }
+
     /// Returns the value of this node.
     pub fn value(&self) -> &'a T {
         &self.node.value
@@ -213,6 +223,16 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 }
 
 impl<'a, T: 'a> NodeMut<'a, T> {
+    /// Returns the ID of this node.
+    pub fn id(&self) -> NodeId {
+        self.id
+    }
+
+    /// Returns the tree owning this node.
+    pub fn tree(&mut self) -> &mut Tree<T> {
+        self.tree
+    }
+
     fn node(&mut self) -> &mut Node<T> {
         unsafe { self.tree.node_mut(self.id) }
     }
