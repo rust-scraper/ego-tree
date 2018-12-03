@@ -76,12 +76,10 @@ impl<T> Node<T> {
 #[derive(Debug)]
 pub struct NodeRef<'a, T: 'a> {
     /// Node ID.
-    #[deprecated(since = "0.5.1", note = "use the id() method instead and upgrade to 0.6")]
-    pub id: NodeId,
+    id: NodeId,
 
     /// Tree containing the node.
-    #[deprecated(since = "0.5.1", note = "use the tree() method instead and upgrade to 0.6")]
-    pub tree: &'a Tree<T>,
+    tree: &'a Tree<T>,
 
     node: &'a Node<T>,
 }
@@ -90,12 +88,10 @@ pub struct NodeRef<'a, T: 'a> {
 #[derive(Debug)]
 pub struct NodeMut<'a, T: 'a> {
     /// Node ID.
-    #[deprecated(since = "0.5.1", note = "use the id() method instead and upgrade to 0.6")]
-    pub id: NodeId,
+    id: NodeId,
 
     /// Tree containing the node.
-    #[deprecated(since = "0.5.1", note = "use the tree() method instead and upgrade to 0.6")]
-    pub tree: &'a mut Tree<T>,
+    tree: &'a mut Tree<T>,
 }
 
 // Trait implementations regardless of T.
@@ -107,7 +103,6 @@ impl<'a, T: 'a> Clone for NodeRef<'a, T> {
 
 impl<'a, T: 'a> Eq for NodeRef<'a, T> { }
 impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
-    #[allow(deprecated)]
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.tree as *const _ == other.tree as *const _
@@ -115,7 +110,6 @@ impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
     }
 }
 
-#[allow(deprecated)]
 impl<T> Tree<T> {
     /// Creates a tree with a root node.
     pub fn new(root: T) -> Self {
@@ -176,7 +170,6 @@ impl<T> Tree<T> {
     }
 }
 
-#[allow(deprecated)]
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns the ID of this node.
     pub fn id(&self) -> NodeId {
@@ -229,7 +222,6 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     }
 }
 
-#[allow(deprecated)]
 impl<'a, T: 'a> NodeMut<'a, T> {
     /// Returns the ID of this node.
     pub fn id(&self) -> NodeId {
@@ -548,7 +540,6 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 }
 
-#[allow(deprecated)]
 impl<'a, T: 'a> From<NodeMut<'a, T>> for NodeRef<'a, T> {
     fn from(node: NodeMut<'a, T>) -> Self {
         unsafe { node.tree.get_unchecked(node.id) }
