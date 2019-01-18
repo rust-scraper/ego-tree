@@ -21,9 +21,6 @@ fn values() {
 
 #[test]
 fn values_mut() {
-    #[allow(unused_imports)]
-    use std::ascii::AsciiExt;
-
     let mut tree = tree!('a' => { 'b', 'c', 'd' });
 
     for c in tree.values_mut() {
