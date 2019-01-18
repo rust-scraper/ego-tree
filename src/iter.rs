@@ -1,5 +1,4 @@
-use std::{mem, slice, vec};
-use std::num::NonZeroUsize;
+use std::{slice, vec};
 use std::ops::Range;
 
 use {Tree, NodeId, Node, NodeRef};
@@ -78,16 +77,10 @@ impl<'a, T: 'a> Clone for Nodes<'a, T> {
     }
 }
 impl<'a, T: 'a> ExactSizeIterator for Nodes<'a, T> { }
-impl<'a, T: 'a> Nodes<'a, T> {
-    unsafe fn from_index(&self, i: usize) -> NodeRef<'a, T> {
-        self.tree.get_unchecked(NodeId(NonZeroUsize::new_unchecked(i)))
-    }
-}
 impl<'a, T: 'a> Iterator for Nodes<'a, T> {
     type Item = NodeRef<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
-        // Safety: `i` is in `1..self.vec.len()`, so it is non-zero and in bounds.
-        self.iter.next().map(|i| unsafe { self.from_index(i) })
+        self.iter.next().map(|i| unsafe { self.tree.get_unchecked(NodeId(i)) })
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
@@ -95,8 +88,7 @@ impl<'a, T: 'a> Iterator for Nodes<'a, T> {
 }
 impl<'a, T: 'a> DoubleEndedIterator for Nodes<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        // Safety: `i` is in `1..self.vec.len()`, so it is non-zero and in bounds.
-        self.iter.next_back().map(|i| unsafe { self.from_index(i) })
+        self.iter.next_back().map(|i| unsafe { self.tree.get_unchecked(NodeId(i)) })
     }
 }
 
@@ -104,30 +96,24 @@ impl<T> IntoIterator for Tree<T> {
     type Item = T;
     type IntoIter = IntoIter<T>;
     fn into_iter(self) -> Self::IntoIter {
-        let mut iter = self.vec.into_iter();
-        // Don’t yield the uninitialized node at index 0 or run its destructor.
-        mem::forget(iter.next());
-        IntoIter(iter)
+        IntoIter(self.vec.into_iter())
     }
 }
 
 impl<T> Tree<T> {
     /// Returns an iterator over values in insert order.
     pub fn values(&self) -> Values<T> {
-        // Skip over the uninitialized node at index 0
-        Values(self.vec[1..].iter())
+        Values(self.vec.iter())
     }
 
     /// Returns a mutable iterator over values in insert order.
     pub fn values_mut(&mut self) -> ValuesMut<T> {
-        // Skip over the uninitialized node at index 0
-        ValuesMut(self.vec[1..].iter_mut())
+        ValuesMut(self.vec.iter_mut())
     }
 
     /// Returns an iterator over nodes in insert order.
     pub fn nodes(&self) -> Nodes<T> {
-        // Skip over the uninitialized node at index 0
-        Nodes { tree: self, iter: 1..self.vec.len() }
+        Nodes { tree: self, iter: 0..self.vec.len() }
     }
 }
 
