@@ -36,49 +36,20 @@
 )]
 
 use std::fmt::{self, Debug, Formatter};
-use std::num::NonZeroUsize;
 
 /// Vec-backed ID-tree.
 ///
 /// Always contains at least a root node.
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Tree<T> {
-    // Safety note: node at index 0 is uninitialized!
     vec: Vec<Node<T>>,
 }
-
-impl<T> Clone for Tree<T> where T: Clone {
-    fn clone(&self) -> Self {
-        let mut vec = Vec::with_capacity(self.vec.len());
-        // See Tree::with_capacity
-        unsafe {
-            vec.set_len(1);
-        }
-        vec.extend(self.vec[1..].iter().cloned());
-        Tree { vec }
-    }
-}
-
-impl<T> std::hash::Hash for Tree<T> where T: std::hash::Hash {
-    fn hash<H>(&self, state: &mut H) where H: std::hash::Hasher {
-        self.vec[1..].hash(state)
-    }
-}
-
-impl<T> Eq for Tree<T> where T: Eq {}
-impl<T> PartialEq for Tree<T> where T: PartialEq {
-    fn eq(&self, other: &Self) -> bool {
-        self.vec[1..] == other.vec[1..]
-    }
-}
-
 
 /// Node ID.
 ///
 /// Index into a `Tree`-internal `Vec`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NodeId(NonZeroUsize);
-
-const ROOT: NodeId = NodeId(unsafe { NonZeroUsize::new_unchecked(1) });
+pub struct NodeId(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Node<T> {
@@ -87,13 +58,6 @@ struct Node<T> {
     next_sibling: Option<NodeId>,
     children: Option<(NodeId, NodeId)>,
     value: T,
-}
-
-fn _static_assert_size_of_node() {
-    // "Instanciating" the generic `transmute` function without calling it
-    // still triggers the magic compile-time check
-    // that input and output types have the same `size_of()`.
-    let _ = std::mem::transmute::<Node<()>, [usize; 5]>;
 }
 
 impl<T> Node<T> {
@@ -149,42 +113,33 @@ impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
 impl<T> Tree<T> {
     /// Creates a tree with a root node.
     pub fn new(root: T) -> Self {
-        Self::with_capacity(root, 1)
+        Tree { vec: vec![Node::new(root)] }
     }
 
     /// Creates a tree with a root node and the specified capacity.
     pub fn with_capacity(root: T, capacity: usize) -> Self {
-        let mut vec = Vec::with_capacity(capacity.saturating_add(1));
-        // The node at index 0 is unused and uninitialized.
-        // This allows using NonZeroUsize directly as an index.
-        //
-        // Safety: we requested at least 1 of capacity, so this is in bounds.
-        // It is up to the rest of the crate to not access this uninitialized node.
-        unsafe {
-            vec.set_len(1);
-        }
-        // The root node is at index 1
+        let mut vec = Vec::with_capacity(capacity);
         vec.push(Node::new(root));
         Tree { vec }
     }
 
     /// Returns a reference to the specified node.
     pub fn get(&self, id: NodeId) -> Option<NodeRef<T>> {
-        self.vec.get(id.0.get()).map(|node| NodeRef { id, node, tree: self })
+        self.vec.get(id.0).map(|node| NodeRef { id, node, tree: self })
     }
 
     /// Returns a mutator of the specified node.
     pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<T>> {
-        let exists = self.vec.get(id.0.get()).map(|_| ());
+        let exists = self.vec.get(id.0).map(|_| ());
         exists.map(move |_| NodeMut { id, tree: self })
     }
 
     unsafe fn node(&self, id: NodeId) -> &Node<T> {
-        self.vec.get_unchecked(id.0.get())
+        self.vec.get_unchecked(id.0)
     }
 
     unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
-        self.vec.get_unchecked_mut(id.0.get())
+        self.vec.get_unchecked_mut(id.0)
     }
 
     /// Returns a reference to the specified node.
@@ -199,19 +154,17 @@ impl<T> Tree<T> {
 
     /// Returns a reference to the root node.
     pub fn root(&self) -> NodeRef<T> {
-        unsafe { self.get_unchecked(ROOT) }
+        unsafe { self.get_unchecked(NodeId(0)) }
     }
 
     /// Returns a mutator of the root node.
     pub fn root_mut(&mut self) -> NodeMut<T> {
-        unsafe { self.get_unchecked_mut(ROOT) }
+        unsafe { self.get_unchecked_mut(NodeId(0)) }
     }
 
     /// Creates an orphan node.
     pub fn orphan(&mut self, value: T) -> NodeMut<T> {
-        // Safety: vec.len() starts at 2 in Self::with_capacity and never shrinks,
-        // so it is non-zero.
-        let id = NodeId(unsafe { NonZeroUsize::new_unchecked(self.vec.len()) });
+        let id = NodeId(self.vec.len());
         self.vec.push(Node::new(value));
         unsafe { self.get_unchecked_mut(id) }
     }
@@ -675,8 +628,8 @@ macro_rules! tree {
 impl<T: Debug> Debug for Tree<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use iter::Edge;
-        write!(f, "Tree {{")?;
         if f.alternate() {
+            write!(f, "Tree {{")?;
             for edge in self.root().traverse() {
                 match edge {
                     Edge::Open(node) if node.has_children() => {
@@ -700,12 +653,7 @@ impl<T: Debug> Debug for Tree<T> {
             }
             write!(f, " }}")
         } else {
-            write!(f, "Tree {{ [<uninitialized>")?;
-            for node in &self.vec[1..] {
-                write!(f, ", ")?;
-                node.fmt(f)?;
-            }
-            write!(f, "] }}")
+            f.debug_struct("Tree").field("vec", &self.vec).finish()
         }
     }
 }
