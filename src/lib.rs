@@ -438,6 +438,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
 
         {
             let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
+            new_sibling.detach();
             new_sibling.node().parent = Some(parent_id);
             new_sibling.node().prev_sibling = prev_sibling_id;
             new_sibling.node().next_sibling = Some(self.id);
@@ -472,6 +473,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
 
         {
             let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
+            new_sibling.detach();
             new_sibling.node().parent = Some(parent_id);
             new_sibling.node().prev_sibling = Some(self.id);
             new_sibling.node().next_sibling = next_sibling_id;
