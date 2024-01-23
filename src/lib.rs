@@ -189,6 +189,28 @@ impl<T> Tree<T> {
         self.vec.push(Node::new(value));
         unsafe { self.get_unchecked_mut(id) }
     }
+
+    /// Merge with another tree as orphan, returning the new root of tree being merged.
+    pub fn extend_tree(&mut self, mut other_tree: Tree<T>) -> NodeMut<T> {
+        let offset = self.vec.len();
+        let offset_id = |id: NodeId| -> NodeId {
+            let old_index = id.to_index();
+            let new_index = old_index + offset;
+            unsafe { NodeId::from_index(new_index) }
+        };
+        let other_tree_root_id = offset_id(other_tree.root().id);
+        for node in other_tree.vec.iter_mut() {
+            node.parent.as_mut().map(|id| *id = offset_id(*id));
+            node.prev_sibling.as_mut().map(|id| *id = offset_id(*id));
+            node.next_sibling.as_mut().map(|id| *id = offset_id(*id));
+            node.children.as_mut().map(|(id1, id2)| {
+                *id1 = offset_id(*id1);
+                *id2 = offset_id(*id2);
+            });
+        }
+        self.vec.extend(other_tree.vec);
+        unsafe { self.get_unchecked_mut(other_tree_root_id) }
+    }
 }
 
 impl<'a, T: 'a> NodeRef<'a, T> {
@@ -313,6 +335,18 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     pub fn prepend(&mut self, value: T) -> NodeMut<T> {
         let id = self.tree.orphan(value).id;
         self.prepend_id(id)
+    }
+
+    /// Appends a subtree, return the root of the merged subtree.
+    pub fn append_subtree(&mut self, subtree: Tree<T>) -> NodeMut<T> {
+        let root_id = self.tree.extend_tree(subtree).id;
+        self.append_id(root_id)
+    }
+
+    /// Prepends a subtree, return the root of the merged subtree.
+    pub fn prepend_subtree(&mut self, subtree: Tree<T>) -> NodeMut<T> {
+        let root_id = self.tree.extend_tree(subtree).id;
+        self.prepend_id(root_id)
     }
 
     /// Inserts a new sibling before this node.
