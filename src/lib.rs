@@ -172,6 +172,8 @@ impl<T> Tree<T> {
     }
 
     /// Returns a reference to the specified node.
+    /// # Safety
+    /// The caller must ensure that `id` is a valid node ID.
     pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<T> {
         NodeRef {
             id,
@@ -181,6 +183,8 @@ impl<T> Tree<T> {
     }
 
     /// Returns a mutator of the specified node.
+    /// # Safety
+    /// The caller must ensure that `id` is a valid node ID.
     pub unsafe fn get_unchecked_mut(&mut self, id: NodeId) -> NodeMut<T> {
         NodeMut { id, tree: self }
     }
