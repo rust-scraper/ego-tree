@@ -176,8 +176,8 @@ pub struct Children<'a, T: 'a> {
 impl<'a, T: 'a> Clone for Children<'a, T> {
     fn clone(&self) -> Self {
         Self {
-            front: self.front.clone(),
-            back: self.back.clone(),
+            front: self.front,
+            back: self.back,
         }
     }
 }

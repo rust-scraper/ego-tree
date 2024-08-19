@@ -128,8 +128,8 @@ impl<'a, T: 'a> Eq for NodeRef<'a, T> {}
 impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
-            && self.tree as *const _ == other.tree as *const _
-            && self.node as *const _ == other.node as *const _
+            && std::ptr::eq(self.tree, other.tree)
+            && std::ptr::eq(self.node, other.node)
     }
 }
 

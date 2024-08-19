@@ -66,15 +66,15 @@ fn last_child() {
 #[test]
 fn has_siblings() {
     let mut tree = tree!('a' => { 'b', 'c' });
-    assert_eq!(true, tree.root_mut().first_child().unwrap().has_siblings());
-    assert_eq!(false, tree.root_mut().has_siblings());
+    assert!(tree.root_mut().first_child().unwrap().has_siblings());
+    assert!(!tree.root_mut().has_siblings());
 }
 
 #[test]
 fn has_children() {
     let mut tree = tree!('a' => { 'b', 'c' });
-    assert_eq!(true, tree.root_mut().has_children());
-    assert_eq!(false, tree.root_mut().first_child().unwrap().has_children());
+    assert!(tree.root_mut().has_children());
+    assert!(!tree.root_mut().first_child().unwrap().has_children());
 }
 
 #[test]
@@ -310,7 +310,7 @@ fn reparent_from_id_append() {
     let g = b.last_child().unwrap();
     let f = g.prev_sibling().unwrap();
 
-    assert_eq!(false, e.has_children());
+    assert!(!e.has_children());
     assert_eq!(&'f', f.value());
     assert_eq!(&'g', g.value());
     assert_eq!(Some(f), d.next_sibling());
@@ -337,7 +337,7 @@ fn reparent_from_id_prepend() {
     let d = c.next_sibling().unwrap();
     let f = b.last_child().unwrap().prev_sibling().unwrap();
 
-    assert_eq!(false, e.has_children());
+    assert!(!e.has_children());
     assert_eq!(&'c', c.value());
     assert_eq!(&'d', d.value());
     assert_eq!(Some(f), d.next_sibling());
