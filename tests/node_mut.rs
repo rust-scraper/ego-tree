@@ -299,7 +299,10 @@ fn reparent_from_id_append() {
         }
     };
     let e_id = tree.root().last_child().unwrap().id();
-    tree.root_mut().first_child().unwrap().reparent_from_id_append(e_id);
+    tree.root_mut()
+        .first_child()
+        .unwrap()
+        .reparent_from_id_append(e_id);
 
     let b = tree.root().first_child().unwrap();
     let e = tree.root().last_child().unwrap();
@@ -323,7 +326,10 @@ fn reparent_from_id_prepend() {
         }
     };
     let e_id = tree.root().last_child().unwrap().id();
-    tree.root_mut().first_child().unwrap().reparent_from_id_prepend(e_id);
+    tree.root_mut()
+        .first_child()
+        .unwrap()
+        .reparent_from_id_prepend(e_id);
 
     let b = tree.root().first_child().unwrap();
     let e = tree.root().last_child().unwrap();
