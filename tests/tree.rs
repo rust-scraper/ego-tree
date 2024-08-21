@@ -1,6 +1,6 @@
 extern crate ego_tree;
 
-use ego_tree::Tree;
+use ego_tree::{tree, Tree};
 
 #[test]
 fn new() {
@@ -68,4 +68,91 @@ fn neq() {
     let one = Tree::new('a');
     let two = Tree::new('b');
     assert_eq!(one, two);
+}
+
+#[test]
+fn insert_id_after() {
+    let mut tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let a = tree.root().first_child().unwrap().id();
+    let b = tree.root().last_child().unwrap().id();
+
+    assert_eq!(2, tree.root().children().count());
+    assert_eq!(1, tree.get(a).unwrap().children().count());
+    assert_eq!(1, tree.get(b).unwrap().children().count());
+
+    let child_1 = tree.get(a).unwrap().first_child().unwrap().id();
+    tree.get_mut(b).unwrap().insert_id_after(child_1);
+
+    assert_eq!(
+        0,
+        tree.get(a).unwrap().children().count(),
+        "child 1 should be moved from a"
+    );
+    assert_eq!(
+        1,
+        tree.get(b).unwrap().children().count(),
+        "b should be unchanged"
+    );
+    assert_eq!(
+        child_1,
+        tree.root().last_child().unwrap().id(),
+        "child 1 should be last child of root"
+    );
+    assert_eq!(3, tree.root().children().count());
+}
+
+#[test]
+fn insert_id_before() {
+    let mut tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let a = tree.root().first_child().unwrap().id();
+    let b = tree.root().last_child().unwrap().id();
+
+    assert_eq!(2, tree.root().children().count());
+    assert_eq!(1, tree.get(a).unwrap().children().count());
+    assert_eq!(1, tree.get(b).unwrap().children().count());
+
+    let child_1 = tree.get(a).unwrap().first_child().unwrap().id();
+    tree.get_mut(b).unwrap().insert_id_before(child_1);
+
+    assert_eq!(
+        0,
+        tree.get(a).unwrap().children().count(),
+        "child 1 should be moved from a"
+    );
+    assert_eq!(
+        1,
+        tree.get(b).unwrap().children().count(),
+        "b should be unchanged"
+    );
+    assert_eq!(
+        b,
+        tree.root().last_child().unwrap().id(),
+        "b should be last child of root"
+    );
+    assert_eq!(
+        child_1,
+        tree.get(b).unwrap().prev_sibling().unwrap().id(),
+        "child 1 should be between a and b"
+    );
+    assert_eq!(3, tree.root().children().count());
 }
