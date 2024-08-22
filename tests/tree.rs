@@ -171,7 +171,7 @@ fn test_display() {
     };
 
     let repr = format!("{tree}");
-    let expected = "root\n    a\n        child 1\n    b\n        child 2\n";
+    let expected = "root\n├── a\n│   └── child 1\n└── b\n    └── child 2\n";
 
     assert_eq!(repr, expected);
 
@@ -184,7 +184,7 @@ fn test_display() {
     };
 
     let repr = format!("{tree}");
-    let expected = "root\n    a\n    b\n        x\n        y\n    c\n";
+    let expected = "root\n├── a\n├── b\n│   ├── x\n│   └── y\n└── c\n";
 
     assert_eq!(repr, expected);
 }

@@ -719,36 +719,34 @@ impl<T: Debug> Debug for Tree<T> {
     }
 }
 
+// Handles display
+mod display;
+
 impl<T: Display> Display for Tree<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use display::Indentation;
         use iter::Edge;
 
-        fn indent(f: &mut Formatter, level: usize) -> Result<(), fmt::Error> {
-            for _ in 0..level {
-                write!(f, "    ")?;
-            }
-            Ok(())
-        }
-
-        let mut level: usize = 0;
+        let mut indent: Indentation = Indentation::new(true);
 
         for edge in self.root().traverse() {
             match edge {
                 Edge::Open(node) if node.has_children() => {
-                    indent(f, level)?;
-                    write!(f, "{}\n", node.value())?;
-                    level += 1;
+                    indent.indent(node.next_sibling().is_some());
+                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
                 }
                 Edge::Open(node) if node.next_sibling().is_some() => {
-                    indent(f, level)?;
-                    write!(f, "{}\n", node.value())?;
+                    indent.indent(node.next_sibling().is_some());
+                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
+                    indent.deindent();
                 }
                 Edge::Open(node) => {
-                    indent(f, level)?;
-                    write!(f, "{}\n", node.value())?;
+                    indent.indent(node.next_sibling().is_some());
+                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
+                    indent.deindent();
                 }
                 Edge::Close(node) if node.has_children() => {
-                    level -= 1;
+                    indent.deindent();
                 }
                 _ => {}
             }
