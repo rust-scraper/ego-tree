@@ -9,17 +9,20 @@ struct Token {
     children: bool,
 }
 
-impl ToString for Token {
-    fn to_string(&self) -> String {
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let Token { siblings, children } = self;
 
-        match (siblings, children) {
-            (true, true) => "│   ",
-            (true, false) => "├── ",
-            (false, true) => "    ",
-            (false, false) => "└── ",
-        }
-        .to_string()
+        write!(
+            f,
+            "{}",
+            match (siblings, children) {
+                (true, true) => "│   ",
+                (true, false) => "├── ",
+                (false, true) => "    ",
+                (false, false) => "└── ",
+            }
+        )
     }
 }
 
@@ -50,7 +53,7 @@ impl Display for Indentation {
         let first: usize = if self.ignore_root { 1 } else { 0 };
 
         for token in &self.tokens[first..] {
-            write!(f, "{}", token.to_string())?;
+            write!(f, "{token}")?;
         }
 
         Ok(())

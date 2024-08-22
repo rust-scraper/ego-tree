@@ -733,16 +733,11 @@ impl<T: Display> Display for Tree<T> {
             match edge {
                 Edge::Open(node) if node.has_children() => {
                     indent.indent(node.next_sibling().is_some());
-                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
-                }
-                Edge::Open(node) if node.next_sibling().is_some() => {
-                    indent.indent(node.next_sibling().is_some());
-                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
-                    indent.deindent();
+                    writeln!(f, "{indent}{}", node.value())?;
                 }
                 Edge::Open(node) => {
                     indent.indent(node.next_sibling().is_some());
-                    write!(f, "{}{}\n", indent.to_string(), node.value())?;
+                    writeln!(f, "{indent}{}", node.value())?;
                     indent.deindent();
                 }
                 Edge::Close(node) if node.has_children() => {
