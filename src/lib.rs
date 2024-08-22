@@ -207,6 +207,8 @@ impl<T> Tree<T> {
     }
 
     /// Merge with another tree as orphan, returning the new root of tree being merged.
+    // Allowing this for compactness.
+    #[allow(clippy::option_map_unit_fn)]
     pub fn extend_tree(&mut self, mut other_tree: Tree<T>) -> NodeMut<T> {
         let offset = self.vec.len();
         let offset_id = |id: NodeId| -> NodeId {
