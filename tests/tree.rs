@@ -156,3 +156,35 @@ fn insert_id_before() {
     );
     assert_eq!(3, tree.root().children().count());
 }
+
+#[test]
+fn test_display() {
+    let tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let repr = format!("{tree}");
+    let expected = "root\n├── a\n│   └── child 1\n└── b\n    └── child 2\n";
+
+    assert_eq!(repr, expected);
+
+    let tree = tree! {
+        "root" => {
+            "a", "b" => {
+                "x", "y"
+            }, "c"
+        }
+    };
+
+    let repr = format!("{tree}");
+    let expected = "root\n├── a\n├── b\n│   ├── x\n│   └── y\n└── c\n";
+
+    assert_eq!(repr, expected);
+}

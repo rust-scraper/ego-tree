@@ -35,7 +35,7 @@
     missing_copy_implementations
 )]
 
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroUsize;
 
 /// Vec-backed ID-tree.
@@ -716,5 +716,36 @@ impl<T: Debug> Debug for Tree<T> {
         } else {
             f.debug_struct("Tree").field("vec", &self.vec).finish()
         }
+    }
+}
+
+// Handles display
+mod display;
+
+impl<T: Display> Display for Tree<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use display::Indentation;
+        use iter::Edge;
+
+        let mut indent: Indentation = Indentation::new(true);
+
+        for edge in self.root().traverse() {
+            match edge {
+                Edge::Open(node) if node.has_children() => {
+                    indent.indent(node.next_sibling().is_some());
+                    writeln!(f, "{indent}{}", node.value())?;
+                }
+                Edge::Open(node) => {
+                    indent.indent(node.next_sibling().is_some());
+                    writeln!(f, "{indent}{}", node.value())?;
+                    indent.deindent();
+                }
+                Edge::Close(node) if node.has_children() => {
+                    indent.deindent();
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 }
