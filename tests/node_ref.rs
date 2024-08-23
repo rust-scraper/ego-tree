@@ -55,22 +55,22 @@ fn index_of_child() {
 #[test]
 fn has_siblings() {
     let tree = tree!('a' => { 'b', 'c' });
-    assert_eq!(false, tree.root().has_siblings());
-    assert_eq!(true, tree.root().first_child().unwrap().has_siblings());
+    assert!(!tree.root().has_siblings());
+    assert!(tree.root().first_child().unwrap().has_siblings());
 }
 
 #[test]
 fn has_children() {
     let tree = tree!('a' => { 'b', 'c' });
-    assert_eq!(true, tree.root().has_children());
-    assert_eq!(false, tree.root().first_child().unwrap().has_children());
+    assert!(tree.root().has_children());
+    assert!(!tree.root().first_child().unwrap().has_children());
 }
 
 #[test]
 fn clone() {
     let tree = tree!('a');
     let one = tree.root();
-    let two = one.clone();
+    let two = one;
     assert_eq!(one, two);
 }
 

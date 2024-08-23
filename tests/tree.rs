@@ -1,6 +1,6 @@
 extern crate ego_tree;
 
-use ego_tree::Tree;
+use ego_tree::{tree, Tree};
 
 #[test]
 fn new() {
@@ -37,14 +37,14 @@ fn orphan() {
 #[test]
 fn get() {
     let tree = Tree::new('a');
-    let id = tree.root().id;
+    let id = tree.root().id();
     assert_eq!(Some(tree.root()), tree.get(id));
 }
 
 #[test]
 fn get_mut() {
     let mut tree = Tree::new('a');
-    let id = tree.root().id;
+    let id = tree.root().id();
     assert_eq!(Some('a'), tree.get_mut(id).map(|mut n| *n.value()));
 }
 
@@ -68,4 +68,123 @@ fn neq() {
     let one = Tree::new('a');
     let two = Tree::new('b');
     assert_eq!(one, two);
+}
+
+#[test]
+fn insert_id_after() {
+    let mut tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let a = tree.root().first_child().unwrap().id();
+    let b = tree.root().last_child().unwrap().id();
+
+    assert_eq!(2, tree.root().children().count());
+    assert_eq!(1, tree.get(a).unwrap().children().count());
+    assert_eq!(1, tree.get(b).unwrap().children().count());
+
+    let child_1 = tree.get(a).unwrap().first_child().unwrap().id();
+    tree.get_mut(b).unwrap().insert_id_after(child_1);
+
+    assert_eq!(
+        0,
+        tree.get(a).unwrap().children().count(),
+        "child 1 should be moved from a"
+    );
+    assert_eq!(
+        1,
+        tree.get(b).unwrap().children().count(),
+        "b should be unchanged"
+    );
+    assert_eq!(
+        child_1,
+        tree.root().last_child().unwrap().id(),
+        "child 1 should be last child of root"
+    );
+    assert_eq!(3, tree.root().children().count());
+}
+
+#[test]
+fn insert_id_before() {
+    let mut tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let a = tree.root().first_child().unwrap().id();
+    let b = tree.root().last_child().unwrap().id();
+
+    assert_eq!(2, tree.root().children().count());
+    assert_eq!(1, tree.get(a).unwrap().children().count());
+    assert_eq!(1, tree.get(b).unwrap().children().count());
+
+    let child_1 = tree.get(a).unwrap().first_child().unwrap().id();
+    tree.get_mut(b).unwrap().insert_id_before(child_1);
+
+    assert_eq!(
+        0,
+        tree.get(a).unwrap().children().count(),
+        "child 1 should be moved from a"
+    );
+    assert_eq!(
+        1,
+        tree.get(b).unwrap().children().count(),
+        "b should be unchanged"
+    );
+    assert_eq!(
+        b,
+        tree.root().last_child().unwrap().id(),
+        "b should be last child of root"
+    );
+    assert_eq!(
+        child_1,
+        tree.get(b).unwrap().prev_sibling().unwrap().id(),
+        "child 1 should be between a and b"
+    );
+    assert_eq!(3, tree.root().children().count());
+}
+
+#[test]
+fn test_display() {
+    let tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let repr = format!("{tree}");
+    let expected = "root\n├── a\n│   └── child 1\n└── b\n    └── child 2\n";
+
+    assert_eq!(repr, expected);
+
+    let tree = tree! {
+        "root" => {
+            "a", "b" => {
+                "x", "y"
+            }, "c"
+        }
+    };
+
+    let repr = format!("{tree}");
+    let expected = "root\n├── a\n├── b\n│   ├── x\n│   └── y\n└── c\n";
+
+    assert_eq!(repr, expected);
 }

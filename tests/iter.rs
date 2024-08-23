@@ -21,9 +21,6 @@ fn values() {
 
 #[test]
 fn values_mut() {
-    #[allow(unused_imports)]
-    use std::ascii::AsciiExt;
-
     let mut tree = tree!('a' => { 'b', 'c', 'd' });
 
     for c in tree.values_mut() {
@@ -50,10 +47,14 @@ fn nodes() {
 #[test]
 fn ancestors() {
     let tree = tree!('a' => { 'b' => { 'c' => { 'd' } } });
-    let d = tree.root()
-        .last_child().unwrap()
-        .last_child().unwrap()
-        .last_child().unwrap();
+    let d = tree
+        .root()
+        .last_child()
+        .unwrap()
+        .last_child()
+        .unwrap()
+        .last_child()
+        .unwrap();
     assert_eq!(
         vec![&'c', &'b', &'a'],
         d.ancestors().map(|n| n.value()).collect::<Vec<_>>()
@@ -93,7 +94,10 @@ fn children() {
     let tree = tree!('a' => { 'b', 'c', 'd' });
     assert_eq!(
         vec![&'b', &'c', &'d'],
-        tree.root().children().map(|n| n.value()).collect::<Vec<_>>()
+        tree.root()
+            .children()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
     );
 }
 
@@ -102,7 +106,11 @@ fn children_rev() {
     let tree = tree!('a' => { 'b', 'c', 'd' });
     assert_eq!(
         vec![&'d', &'c', &'b'],
-        tree.root().children().rev().map(|n| n.value()).collect::<Vec<_>>()
+        tree.root()
+            .children()
+            .rev()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
     );
 }
 
@@ -111,7 +119,10 @@ fn first_children() {
     let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
     assert_eq!(
         vec![&'b', &'d'],
-        tree.root().first_children().map(|n| n.value()).collect::<Vec<_>>()
+        tree.root()
+            .first_children()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
     );
 }
 
@@ -120,7 +131,10 @@ fn last_children() {
     let tree = tree!('a' => { 'b', 'c' => { 'd', 'e' } });
     assert_eq!(
         vec![&'c', &'e'],
-        tree.root().last_children().map(|n| n.value()).collect::<Vec<_>>()
+        tree.root()
+            .last_children()
+            .map(|n| n.value())
+            .collect::<Vec<_>>()
     );
 }
 
@@ -136,12 +150,14 @@ fn traverse() {
 
     let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
 
-    let traversal = tree.root().traverse().map(|edge| {
-        match edge {
+    let traversal = tree
+        .root()
+        .traverse()
+        .map(|edge| match edge {
             Edge::Open(node) => Value::Open(node.value()),
             Edge::Close(node) => Value::Close(node.value()),
-        }
-    }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     assert_eq!(
         &[
@@ -164,16 +180,11 @@ fn traverse() {
 fn descendants() {
     let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
 
-    let descendants = tree.root().descendants().map(|n| n.value()).collect::<Vec<_>>();
+    let descendants = tree
+        .root()
+        .descendants()
+        .map(|n| n.value())
+        .collect::<Vec<_>>();
 
-    assert_eq!(
-        &[
-            &'a',
-            &'b',
-            &'d',
-            &'e',
-            &'c',
-        ],
-        &descendants[..]
-    );
+    assert_eq!(&[&'a', &'b', &'d', &'e', &'c',], &descendants[..]);
 }
