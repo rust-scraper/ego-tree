@@ -46,7 +46,7 @@ fn index_of_child() {
     let root = tree.root();
     let b = root.first_child().unwrap();
     let c = root.last_child().unwrap();
-    
+
     assert_eq!(0, root.index_of_child(&b).unwrap());
     assert_eq!(1, root.index_of_child(&c).unwrap());
     assert!(root.index_of_child(&root).is_none());
