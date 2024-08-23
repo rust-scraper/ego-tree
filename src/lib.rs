@@ -373,7 +373,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         let id = self.tree.orphan(value).id;
         self.prepend_id(id)
     }
-    
+
     /// Insert a new child into this node at given index.
     /// This function may take up to linear time in worst case scenarios.
     ///
@@ -493,17 +493,17 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Panics if `new_child_id` or `index` are not valid.
     pub fn insert_id(&mut self, new_child_id: NodeId, index: usize) -> NodeMut<T> {
         if index == 0 {
-            return self.prepend_id(new_child_id)
+            return self.prepend_id(new_child_id);
         }
 
         let mut pre_sibling: NodeMut<T> = unsafe {
             self.tree
-            .get_unchecked(self.id)
-            .children()
-            .nth(index - 1) // worst case O(n)
-            .map(|node| node.id)
-            .map(|id| self.tree.get_unchecked_mut(id))
-            .expect(format!("No child found at index {}", index-1).as_str())
+                .get_unchecked(self.id)
+                .children()
+                .nth(index - 1) // worst case O(n)
+                .map(|node| node.id)
+                .map(|id| self.tree.get_unchecked_mut(id))
+                .unwrap_or_else(|| panic!("No child found at index {}", index - 1))
         };
 
         pre_sibling.insert_id_after(new_child_id);
