@@ -283,8 +283,9 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         let id = self.tree.orphan(value).id;
         self.prepend_id(id)
     }
-
+    
     /// Insert a new child into this node at given index.
+    /// This function may take up to linear time in worst case scenarios.
     ///
     /// # Panics
     ///
@@ -377,6 +378,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Insert a child into this node at given index.
+    /// This function may take up to linear time in worst case scenarios.
     ///
     /// # Panics
     ///
@@ -386,40 +388,17 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             return self.prepend_id(new_child_id)
         }
 
-        assert!(self.has_children(), "invalid index: {}", index);
+        let mut pre_sibling: NodeMut<T> = unsafe {
+            self.tree
+            .get_unchecked(self.id)
+            .children()
+            .nth(index - 1) // worst case O(n)
+            .map(|node| node.id)
+            .map(|id| self.tree.get_unchecked_mut(id))
+            .expect(format!("No child found at index {}", index-1).as_str())
+        };
 
-        let prev_child_id;
-        let next_child_id;
-
-        unsafe {
-            let mut children = self.tree.get_unchecked(self.id).children();
-            prev_child_id = children.nth(index - 1).map(|n| n.id).unwrap();
-            next_child_id = children.next().map(|n| n.id);
-        }
-
-        {
-            let mut new_child = self.tree.get_mut(new_child_id).unwrap();
-            new_child.detach();
-            new_child.node().parent = Some(self.id);
-            new_child.node().prev_sibling = Some(prev_child_id);
-            new_child.node().next_sibling = next_child_id;
-        }
-
-        unsafe { self.tree.node_mut(prev_child_id).next_sibling = Some(new_child_id); }
-
-        if let Some(id) = next_child_id {
-            unsafe { self.tree.node_mut(id).prev_sibling = Some(new_child_id); }
-        }
-
-        {
-            if let Some((first_child_id, last_child_id)) = self.node().children {
-                let last_child_id = next_child_id.map_or(new_child_id, |_| last_child_id);
-                self.node().children = Some((first_child_id, last_child_id));
-            } else {
-                self.node().children = Some((new_child_id, new_child_id));
-            }
-        }
-
+        pre_sibling.insert_id_after(new_child_id);
         unsafe { self.tree.get_unchecked_mut(new_child_id) }
     }
 
