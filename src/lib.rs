@@ -202,13 +202,12 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     }
 
     /// Returns the index of the given child or None if child doesn't exist.
+    /// This function may take up to linear time in worst case scenarios.
     pub fn index_of_child(&self, child: &NodeRef<T>) -> Option<usize> {
-        for (i, ref each) in self.children().enumerate() {
-            if each == child {
-                return Some(i)
-            }
-        }
-        None
+        self.children()
+            .enumerate()
+            .find(|(_, each)| each == child)
+            .map(|(i, _)| i)
     }
 
     /// Returns true if this node has siblings.
