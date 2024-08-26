@@ -204,6 +204,16 @@ fn traverse() {
 }
 
 #[test]
+fn traverse_fused() {
+    let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
+
+    let mut traversal = tree.root().traverse();
+
+    assert_eq!(traversal.by_ref().count(), 2 * 5);
+    assert_eq!(traversal.next(), None);
+}
+
+#[test]
 fn descendants() {
     let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
 
@@ -214,4 +224,14 @@ fn descendants() {
         .collect::<Vec<_>>();
 
     assert_eq!(&[&'a', &'b', &'d', &'e', &'c',], &descendants[..]);
+}
+
+#[test]
+fn descendants_fused() {
+    let tree = tree!('a' => { 'b' => { 'd', 'e' }, 'c' });
+
+    let mut descendants = tree.root().descendants();
+
+    assert_eq!(descendants.by_ref().count(), 5);
+    assert_eq!(descendants.next(), None);
 }

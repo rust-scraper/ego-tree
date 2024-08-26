@@ -243,7 +243,7 @@ impl<'a, T: 'a> PartialEq for Edge<'a, T> {
 /// Iterator which traverses a subtree.
 #[derive(Debug)]
 pub struct Traverse<'a, T: 'a> {
-    root: NodeRef<'a, T>,
+    root: Option<NodeRef<'a, T>>,
     edge: Option<Edge<'a, T>>,
 }
 impl<'a, T: 'a> Clone for Traverse<'a, T> {
@@ -254,12 +254,15 @@ impl<'a, T: 'a> Clone for Traverse<'a, T> {
         }
     }
 }
+impl<'a, T: 'a> FusedIterator for Traverse<'a, T> {}
 impl<'a, T: 'a> Iterator for Traverse<'a, T> {
     type Item = Edge<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
         match self.edge {
             None => {
-                self.edge = Some(Edge::Open(self.root));
+                if let Some(root) = self.root {
+                    self.edge = Some(Edge::Open(root));
+                }
             }
             Some(Edge::Open(node)) => {
                 if let Some(first_child) = node.first_child() {
@@ -269,7 +272,8 @@ impl<'a, T: 'a> Iterator for Traverse<'a, T> {
                 }
             }
             Some(Edge::Close(node)) => {
-                if node == self.root {
+                if node == self.root.unwrap() {
+                    self.root = None;
                     self.edge = None;
                 } else if let Some(next_sibling) = node.next_sibling() {
                     self.edge = Some(Edge::Open(next_sibling));
@@ -290,6 +294,7 @@ impl<'a, T: 'a> Clone for Descendants<'a, T> {
         Descendants(self.0.clone())
     }
 }
+impl<'a, T: 'a> FusedIterator for Descendants<'a, T> {}
 impl<'a, T: 'a> Iterator for Descendants<'a, T> {
     type Item = NodeRef<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -339,7 +344,7 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns an iterator which traverses the subtree starting at this node.
     pub fn traverse(&self) -> Traverse<'a, T> {
         Traverse {
-            root: *self,
+            root: Some(*self),
             edge: None,
         }
     }
