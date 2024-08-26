@@ -1,3 +1,4 @@
+use std::iter::FusedIterator;
 use std::ops::Range;
 use std::{slice, vec};
 
@@ -7,6 +8,7 @@ use {Node, NodeId, NodeRef, Tree};
 #[derive(Debug)]
 pub struct IntoIter<T>(vec::IntoIter<Node<T>>);
 impl<T> ExactSizeIterator for IntoIter<T> {}
+impl<T> FusedIterator for IntoIter<T> {}
 impl<T> Iterator for IntoIter<T> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
@@ -31,6 +33,7 @@ impl<'a, T: 'a> Clone for Values<'a, T> {
     }
 }
 impl<'a, T: 'a> ExactSizeIterator for Values<'a, T> {}
+impl<'a, T: 'a> FusedIterator for Values<'a, T> {}
 impl<'a, T: 'a> Iterator for Values<'a, T> {
     type Item = &'a T;
     fn next(&mut self) -> Option<Self::Item> {
@@ -50,6 +53,7 @@ impl<'a, T: 'a> DoubleEndedIterator for Values<'a, T> {
 #[derive(Debug)]
 pub struct ValuesMut<'a, T: 'a>(slice::IterMut<'a, Node<T>>);
 impl<'a, T: 'a> ExactSizeIterator for ValuesMut<'a, T> {}
+impl<'a, T: 'a> FusedIterator for ValuesMut<'a, T> {}
 impl<'a, T: 'a> Iterator for ValuesMut<'a, T> {
     type Item = &'a mut T;
     fn next(&mut self) -> Option<Self::Item> {
@@ -80,6 +84,7 @@ impl<'a, T: 'a> Clone for Nodes<'a, T> {
     }
 }
 impl<'a, T: 'a> ExactSizeIterator for Nodes<'a, T> {}
+impl<'a, T: 'a> FusedIterator for Nodes<'a, T> {}
 impl<'a, T: 'a> Iterator for Nodes<'a, T> {
     type Item = NodeRef<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
