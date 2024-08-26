@@ -62,6 +62,23 @@ fn ancestors() {
 }
 
 #[test]
+fn ancestors_fused() {
+    let tree = tree!('a' => { 'b' => { 'c' => { 'd' } } });
+    let d = tree
+        .root()
+        .last_child()
+        .unwrap()
+        .last_child()
+        .unwrap()
+        .last_child()
+        .unwrap();
+
+    let mut ancestors = d.ancestors();
+    assert_eq!(ancestors.by_ref().count(), 3);
+    assert_eq!(ancestors.next(), None);
+}
+
+#[test]
 fn prev_siblings() {
     let tree = tree!('a' => { 'b', 'c', 'd' });
     assert_eq!(
@@ -99,6 +116,16 @@ fn children() {
             .map(|n| n.value())
             .collect::<Vec<_>>()
     );
+}
+
+#[test]
+fn children_fused() {
+    let tree = tree!('a' => { 'b', 'c', 'd' });
+
+    let mut children = tree.root().children();
+
+    assert_eq!(children.by_ref().count(), 3);
+    assert_eq!(children.next(), None);
 }
 
 #[test]

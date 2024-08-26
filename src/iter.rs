@@ -143,6 +143,7 @@ macro_rules! axis_iterators {
                     $i(self.0)
                 }
             }
+            impl<'a, T: 'a> FusedIterator for $i<'a, T> {}
             impl<'a, T: 'a> Iterator for $i<'a, T> {
                 type Item = NodeRef<'a, T>;
                 fn next(&mut self) -> Option<Self::Item> {
@@ -186,6 +187,7 @@ impl<'a, T: 'a> Clone for Children<'a, T> {
         }
     }
 }
+impl<'a, T: 'a> FusedIterator for Children<'a, T> {}
 impl<'a, T: 'a> Iterator for Children<'a, T> {
     type Item = NodeRef<'a, T>;
     fn next(&mut self) -> Option<Self::Item> {
