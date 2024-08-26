@@ -724,7 +724,7 @@ macro_rules! tree {
 
 impl<T: Debug> Debug for Tree<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        use iter::Edge;
+        use crate::iter::Edge;
         if f.alternate() {
             write!(f, "Tree {{")?;
             for edge in self.root().traverse() {
@@ -760,8 +760,8 @@ mod display;
 
 impl<T: Display> Display for Tree<T> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        use display::Indentation;
-        use iter::Edge;
+        use crate::display::Indentation;
+        use crate::iter::Edge;
 
         let mut indent: Indentation = Indentation::new(true);
 

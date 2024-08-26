@@ -1,7 +1,7 @@
 use std::ops::Range;
 use std::{slice, vec};
 
-use {Node, NodeId, NodeRef, Tree};
+use crate::{Node, NodeId, NodeRef, Tree};
 
 /// Iterator that moves out of a tree in insert order.
 #[derive(Debug)]
