@@ -278,6 +278,30 @@ fn insert_after() {
 }
 
 #[test]
+fn insert_at_index() {
+    let mut tree = tree!('a' => { 'b', 'c', 'e' });
+
+    {
+        let mut root = tree.root_mut();
+        let mut child = root.first_child().unwrap();
+
+        for _ in 0..2 {
+            child = child.into_next_sibling().unwrap();
+        }
+
+        child.insert_before('d');
+    }
+
+    let descendants = tree
+        .root()
+        .descendants()
+        .map(|n| n.value())
+        .collect::<Vec<_>>();
+
+    assert_eq!(&[&'a', &'b', &'c', &'d', &'e',], &descendants[..]);
+}
+
+#[test]
 fn detach() {
     let mut tree = tree!('a' => { 'b', 'd' });
     let mut root = tree.root_mut();
