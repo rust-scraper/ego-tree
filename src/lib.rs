@@ -318,12 +318,15 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
     }
 
-    fn into_axis<F>(mut self, f: F) -> Option<Self>
+    fn into_axis<F>(mut self, f: F) -> Result<Self, Self>
     where
         F: FnOnce(&mut Node<T>) -> Option<NodeId>,
     {
         let id = f(self.node());
-        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
+        match id {
+            Some(id) => Ok(unsafe { self.tree.get_unchecked_mut(id) }),
+            None => Err(self),
+        }
     }
 
     /// Returns the parent of this node.
@@ -332,7 +335,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the parent of this node.
-    pub fn into_parent(self) -> Option<Self> {
+    ///
+    /// Returns `Ok(parent)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_parent(self) -> Result<Self, Self> {
         self.into_axis(|node| node.parent)
     }
 
@@ -342,7 +348,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the previous sibling of this node.
-    pub fn into_prev_sibling(self) -> Option<Self> {
+    ///
+    /// Returns `Ok(prev_sibling)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_prev_sibling(self) -> Result<Self, Self> {
         self.into_axis(|node| node.prev_sibling)
     }
 
@@ -352,7 +361,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the next sibling of this node.
-    pub fn into_next_sibling(self) -> Option<Self> {
+    ///
+    /// Returns `Ok(next_sibling)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_next_sibling(self) -> Result<Self, Self> {
         self.into_axis(|node| node.next_sibling)
     }
 
@@ -362,7 +374,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the first child of this node.
-    pub fn into_first_child(self) -> Option<Self> {
+    ///
+    /// Returns `Ok(first_child)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_first_child(self) -> Result<Self, Self> {
         self.into_axis(|node| node.children.map(|(id, _)| id))
     }
 
@@ -372,7 +387,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the last child of this node.
-    pub fn into_last_child(self) -> Option<Self> {
+    ///
+    /// Returns `Ok(last_child)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_last_child(self) -> Result<Self, Self> {
         self.into_axis(|node| node.children.map(|(_, id)| id))
     }
 
