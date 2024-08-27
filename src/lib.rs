@@ -247,39 +247,36 @@ impl<'a, T: 'a> NodeRef<'a, T> {
         &self.node.value
     }
 
+    fn axis<F>(&self, f: F) -> Option<Self>
+    where
+        F: FnOnce(&Node<T>) -> Option<NodeId>,
+    {
+        f(self.node).map(|id| unsafe { self.tree.get_unchecked(id) })
+    }
+
     /// Returns the parent of this node.
     pub fn parent(&self) -> Option<Self> {
-        self.node
-            .parent
-            .map(|id| unsafe { self.tree.get_unchecked(id) })
+        self.axis(|node| node.parent)
     }
 
     /// Returns the previous sibling of this node.
     pub fn prev_sibling(&self) -> Option<Self> {
-        self.node
-            .prev_sibling
-            .map(|id| unsafe { self.tree.get_unchecked(id) })
+        self.axis(|node| node.prev_sibling)
     }
 
     /// Returns the next sibling of this node.
     pub fn next_sibling(&self) -> Option<Self> {
-        self.node
-            .next_sibling
-            .map(|id| unsafe { self.tree.get_unchecked(id) })
+        self.axis(|node| node.next_sibling)
     }
 
     /// Returns the first child of this node.
     pub fn first_child(&self) -> Option<Self> {
-        self.node
-            .children
-            .map(|(id, _)| unsafe { self.tree.get_unchecked(id) })
+        self.axis(|node| node.children.map(|(id, _)| id))
     }
 
     /// Returns the last child of this node.
     pub fn last_child(&self) -> Option<Self> {
-        self.node
-            .children
-            .map(|(_, id)| unsafe { self.tree.get_unchecked(id) })
+        self.axis(|node| node.children.map(|(_, id)| id))
     }
 
     /// Returns true if this node has siblings.
@@ -313,34 +310,88 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         &mut self.node().value
     }
 
+    fn axis<F>(&mut self, f: F) -> Option<NodeMut<T>>
+    where
+        F: FnOnce(&mut Node<T>) -> Option<NodeId>,
+    {
+        let id = f(self.node());
+        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
+    }
+
+    fn into_axis<F>(mut self, f: F) -> Result<Self, Self>
+    where
+        F: FnOnce(&mut Node<T>) -> Option<NodeId>,
+    {
+        let id = f(self.node());
+        match id {
+            Some(id) => Ok(unsafe { self.tree.get_unchecked_mut(id) }),
+            None => Err(self),
+        }
+    }
+
     /// Returns the parent of this node.
     pub fn parent(&mut self) -> Option<NodeMut<T>> {
-        let id = self.node().parent;
-        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
+        self.axis(|node| node.parent)
+    }
+
+    /// Returns the parent of this node.
+    ///
+    /// Returns `Ok(parent)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_parent(self) -> Result<Self, Self> {
+        self.into_axis(|node| node.parent)
     }
 
     /// Returns the previous sibling of this node.
     pub fn prev_sibling(&mut self) -> Option<NodeMut<T>> {
-        let id = self.node().prev_sibling;
-        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
+        self.axis(|node| node.prev_sibling)
+    }
+
+    /// Returns the previous sibling of this node.
+    ///
+    /// Returns `Ok(prev_sibling)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_prev_sibling(self) -> Result<Self, Self> {
+        self.into_axis(|node| node.prev_sibling)
     }
 
     /// Returns the next sibling of this node.
     pub fn next_sibling(&mut self) -> Option<NodeMut<T>> {
-        let id = self.node().next_sibling;
-        id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
+        self.axis(|node| node.next_sibling)
+    }
+
+    /// Returns the next sibling of this node.
+    ///
+    /// Returns `Ok(next_sibling)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_next_sibling(self) -> Result<Self, Self> {
+        self.into_axis(|node| node.next_sibling)
     }
 
     /// Returns the first child of this node.
     pub fn first_child(&mut self) -> Option<NodeMut<T>> {
-        let ids = self.node().children;
-        ids.map(move |(id, _)| unsafe { self.tree.get_unchecked_mut(id) })
+        self.axis(|node| node.children.map(|(id, _)| id))
+    }
+
+    /// Returns the first child of this node.
+    ///
+    /// Returns `Ok(first_child)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_first_child(self) -> Result<Self, Self> {
+        self.into_axis(|node| node.children.map(|(id, _)| id))
     }
 
     /// Returns the last child of this node.
     pub fn last_child(&mut self) -> Option<NodeMut<T>> {
-        let ids = self.node().children;
-        ids.map(move |(_, id)| unsafe { self.tree.get_unchecked_mut(id) })
+        self.axis(|node| node.children.map(|(_, id)| id))
+    }
+
+    /// Returns the last child of this node.
+    ///
+    /// Returns `Ok(last_child)` if possible and `Err(self)` otherwise
+    /// so the caller can recover the current position.
+    pub fn into_last_child(self) -> Result<Self, Self> {
+        self.into_axis(|node| node.children.map(|(_, id)| id))
     }
 
     /// Returns true if this node has siblings.
