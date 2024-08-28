@@ -1,4 +1,3 @@
-#![cfg(feature = "serde")]
 use std::num::NonZeroUsize;
 
 use serde::{Deserialize, Serialize};
