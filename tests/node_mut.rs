@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate ego_tree;
-
-use ego_tree::NodeRef;
+use ego_tree::{tree, NodeRef};
 
 #[test]
 fn value() {
