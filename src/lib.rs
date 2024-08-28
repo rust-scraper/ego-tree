@@ -38,6 +38,10 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroUsize;
 
+#[cfg(feature = "serde")]
+/// Implement serde traits for Tree
+pub mod serde;
+
 /// Vec-backed ID-tree.
 ///
 /// Always contains at least a root node.
