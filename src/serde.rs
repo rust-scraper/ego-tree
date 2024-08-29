@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use crate::{NodeId, NodeRef, Tree};
+use crate::{NodeId, NodeMut, NodeRef, Tree};
 
 #[derive(Debug)]
 struct SerNode<'a, T> {
@@ -50,25 +50,24 @@ struct DeserNode<T> {
 }
 
 impl<T> DeserNode<T> {
-    fn into_tree_node(self, tree: &mut Tree<T>, parent: NodeId) -> NodeId {
-        let mut parent = tree.get_mut(parent).unwrap();
-        let node = parent.append(self.value).id();
+    fn into_tree_node(self, parent: &mut NodeMut<T>) -> NodeId {
+        let mut node = parent.append(self.value);
 
         for child in self.children {
-            child.into_tree_node(tree, node);
+            child.into_tree_node(&mut node);
         }
 
-        node
+        node.id
     }
 }
 
 impl<T> From<DeserNode<T>> for Tree<T> {
     fn from(root: DeserNode<T>) -> Self {
         let mut tree: Tree<T> = Tree::new(root.value);
-        let root_id = tree.root().id;
+        let mut tree_root = tree.root_mut();
 
         for child in root.children {
-            child.into_tree_node(&mut tree, root_id);
+            child.into_tree_node(&mut tree_root);
         }
 
         tree
