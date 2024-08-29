@@ -1,4 +1,10 @@
-use serde::{ser::Serialize, Deserialize};
+use std::{fmt, marker::PhantomData};
+
+use serde::{
+    de::{self, MapAccess, Visitor},
+    ser::{Serialize, SerializeStruct},
+    Deserialize, Deserializer,
+};
 
 use crate::{NodeId, NodeRef, Tree};
 
@@ -21,7 +27,10 @@ impl<'a, T: Serialize> Serialize for SerNode<'a, T> {
     where
         S: serde::Serializer,
     {
-        (&self.value, &self.children).serialize(serializer)
+        let mut state = serializer.serialize_struct("SerNode", 2)?;
+        state.serialize_field("value", &self.value)?;
+        state.serialize_field("children", &self.children)?;
+        state.end()
     }
 }
 
@@ -66,13 +75,75 @@ impl<T> From<DeserNode<T>> for Tree<T> {
     }
 }
 
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for DeserNode<T> {
+struct DeserNodeVisitor<T> {
+    marker: PhantomData<fn() -> DeserNode<T>>,
+}
+
+impl<T> DeserNodeVisitor<T> {
+    fn new() -> Self {
+        DeserNodeVisitor {
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, T> Visitor<'de> for DeserNodeVisitor<T>
+where
+    T: Deserialize<'de>,
+{
+    type Value = DeserNode<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("struct DeserNode")
+    }
+
+    fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+    where
+        M: MapAccess<'de>,
+    {
+        let mut value = None;
+        let mut children = None;
+
+        while let Some(key) = map.next_key()? {
+            match key {
+                "value" => {
+                    if value.is_some() {
+                        return Err(de::Error::duplicate_field("value"));
+                    }
+                    value = Some(map.next_value()?);
+                }
+                "children" => {
+                    if children.is_some() {
+                        return Err(de::Error::duplicate_field("children"));
+                    }
+                    children = Some(map.next_value()?);
+                }
+                _ => {
+                    return Err(de::Error::unknown_field(key, &["value", "children"]));
+                }
+            }
+        }
+
+        let value = value.ok_or_else(|| de::Error::missing_field("value"))?;
+        let children = children.ok_or_else(|| de::Error::missing_field("children"))?;
+
+        Ok(DeserNode { value, children })
+    }
+}
+
+impl<'de, T> Deserialize<'de> for DeserNode<T>
+where
+    T: Deserialize<'de>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
-        let (value, children) = <(T, Vec<DeserNode<T>>)>::deserialize(deserializer)?;
-        Ok(DeserNode { value, children })
+        deserializer.deserialize_struct(
+            "DeserNode",
+            &["value", "children"],
+            DeserNodeVisitor::new(),
+        )
     }
 }
 
