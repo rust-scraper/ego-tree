@@ -12,7 +12,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use crate::{NodeId, NodeMut, NodeRef, Tree};
+use crate::{NodeMut, NodeRef, Tree};
 
 #[derive(Debug)]
 struct SerNode<'a, T> {
@@ -56,14 +56,12 @@ struct DeserNode<T> {
 }
 
 impl<T> DeserNode<T> {
-    fn into_tree_node(self, parent: &mut NodeMut<T>) -> NodeId {
+    fn into_tree_node(self, parent: &mut NodeMut<T>) {
         let mut node = parent.append(self.value);
 
         for child in self.children {
             child.into_tree_node(&mut node);
         }
-
-        node.id
     }
 }
 
