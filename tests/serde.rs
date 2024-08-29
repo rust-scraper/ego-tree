@@ -1,7 +1,5 @@
 #![cfg(feature = "serde")]
 
-use std::assert_eq;
-
 use ego_tree::{tree, Tree};
 
 #[test]
