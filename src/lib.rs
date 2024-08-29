@@ -38,8 +38,21 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroUsize;
 
-#[cfg(feature = "serde")]
 /// Implement serde traits for Tree
+///
+/// ```
+/// use ego_tree::{tree, Tree};
+///
+/// let tree = tree!("a" => {"b", "c" => {"d", "e"}, "f"});
+/// let repr = serde_json::to_string(&tree).unwrap();
+/// let re_tree: Tree<&str> = serde_json::from_str(&repr).unwrap();
+/// ```
+///
+///
+/// # Warning
+/// Serialize and Deserialize implementations are recursive. They require an amount of stack memory
+/// propotional to the tree depth.
+#[cfg(feature = "serde")]
 pub mod serde;
 
 /// Vec-backed ID-tree.
