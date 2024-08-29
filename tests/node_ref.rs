@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate ego_tree;
+use ego_tree::tree;
 
 #[test]
 fn value() {

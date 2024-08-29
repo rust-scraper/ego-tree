@@ -38,6 +38,9 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroUsize;
 
+#[cfg(feature = "serde")]
+pub mod serde;
+
 /// Vec-backed ID-tree.
 ///
 /// Always contains at least a root node.
@@ -55,7 +58,7 @@ pub struct NodeId(NonZeroUsize);
 impl NodeId {
     // Safety: `n` must not equal `usize::MAX`.
     // (This is never the case for `Vec::len()`, that would mean it owns
-    // the entire address space without leaving space for even the its pointer.)
+    // the entire address space without leaving space even for its pointer.)
     unsafe fn from_index(n: usize) -> Self {
         NodeId(NonZeroUsize::new_unchecked(n + 1))
     }
@@ -75,7 +78,7 @@ struct Node<T> {
 }
 
 fn _static_assert_size_of_node() {
-    // "Instanciating" the generic `transmute` function without calling it
+    // "Instantiating" the generic `transmute` function without calling it
     // still triggers the magic compile-time check
     // that input and output types have the same `size_of()`.
     let _ = std::mem::transmute::<Node<()>, [usize; 5]>;

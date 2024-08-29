@@ -1,5 +1,3 @@
-extern crate ego_tree;
-
 use ego_tree::{tree, Tree};
 
 #[test]
