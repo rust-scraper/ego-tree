@@ -1,6 +1,6 @@
-use serde::ser::{Serialize, SerializeStruct};
+use serde::{ser::Serialize, Deserialize};
 
-use crate::{NodeRef, Tree};
+use crate::{NodeId, NodeRef, Tree};
 
 #[derive(Debug)]
 struct SerNode<'a, T> {
@@ -34,15 +34,54 @@ impl<T: Serialize> Serialize for Tree<T> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::tree;
+#[derive(Debug)]
+struct DeserNode<T> {
+    value: T,
+    children: Vec<DeserNode<T>>,
+}
 
-    #[test]
-    fn test_ser_node_from() {
-        let tree = tree!("a" => {"b", "c" => {"d", "e"}, "f"});
-        let repr = serde_json::to_string(&SerNode::from(tree.root())).unwrap();
-        println!("{repr}");
+impl<T> DeserNode<T> {
+    fn to_tree_node(self, tree: &mut Tree<T>, parent: NodeId) -> NodeId {
+        let mut parent = tree.get_mut(parent).unwrap();
+        let node = parent.append(self.value).id();
+
+        for child in self.children {
+            child.to_tree_node(tree, node);
+        }
+
+        node
+    }
+}
+
+impl<T> From<DeserNode<T>> for Tree<T> {
+    fn from(root: DeserNode<T>) -> Self {
+        let mut tree: Tree<T> = Tree::new(root.value);
+        let root_id = tree.root().id;
+
+        for child in root.children {
+            child.to_tree_node(&mut tree, root_id);
+        }
+
+        tree
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for DeserNode<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (value, children) = <(T, Vec<DeserNode<T>>)>::deserialize(deserializer)?;
+        Ok(DeserNode { value, children })
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Tree<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let deser = DeserNode::<T>::deserialize(deserializer)?;
+        Ok(deser.into())
     }
 }
