@@ -27,7 +27,7 @@ impl<'a, T: Serialize> Serialize for SerNode<'a, T> {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("SerNode", 2)?;
+        let mut state = serializer.serialize_struct("Node", 2)?;
         state.serialize_field("value", &self.value)?;
         state.serialize_field("children", &self.children)?;
         state.end()
@@ -93,7 +93,7 @@ where
     type Value = DeserNode<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("struct DeserNode")
+        formatter.write_str("struct Node")
     }
 
     fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -138,11 +138,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_struct(
-            "DeserNode",
-            &["value", "children"],
-            DeserNodeVisitor::new(),
-        )
+        deserializer.deserialize_struct("Node", &["value", "children"], DeserNodeVisitor::new())
     }
 }
 
