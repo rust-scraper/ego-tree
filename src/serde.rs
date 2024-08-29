@@ -41,12 +41,12 @@ struct DeserNode<T> {
 }
 
 impl<T> DeserNode<T> {
-    fn to_tree_node(self, tree: &mut Tree<T>, parent: NodeId) -> NodeId {
+    fn into_tree_node(self, tree: &mut Tree<T>, parent: NodeId) -> NodeId {
         let mut parent = tree.get_mut(parent).unwrap();
         let node = parent.append(self.value).id();
 
         for child in self.children {
-            child.to_tree_node(tree, node);
+            child.into_tree_node(tree, node);
         }
 
         node
@@ -59,7 +59,7 @@ impl<T> From<DeserNode<T>> for Tree<T> {
         let root_id = tree.root().id;
 
         for child in root.children {
-            child.to_tree_node(&mut tree, root_id);
+            child.into_tree_node(&mut tree, root_id);
         }
 
         tree
