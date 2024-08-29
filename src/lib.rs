@@ -38,11 +38,6 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::NonZeroUsize;
 
-/// Implement serde::Serialize and serde::Deserialize traits for Tree
-///
-/// # Warning
-/// Serialize and Deserialize implementations are recursive. They require an amount of stack memory
-/// proportional to the tree depth.
 #[cfg(feature = "serde")]
 pub mod serde;
 

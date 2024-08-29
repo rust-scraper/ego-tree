@@ -1,3 +1,9 @@
+//! Implement `serde::Serialize` and `serde::Deserialize` traits for Tree
+//!
+//! # Warning
+//! Serialize and Deserialize implementations are recursive. They require an amount of stack memory
+//! proportional to the depth of the tree.
+
 use std::{fmt, marker::PhantomData};
 
 use serde::{
