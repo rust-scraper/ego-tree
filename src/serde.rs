@@ -16,9 +16,9 @@ struct SerNode<'a, T> {
 
 impl<'a, T> From<NodeRef<'a, T>> for SerNode<'a, T> {
     fn from(node: NodeRef<'a, T>) -> Self {
-        let value: &T = node.value();
-        let children: Vec<SerNode<'a, T>> = node.children().map(SerNode::<'a, T>::from).collect();
-        SerNode { value, children }
+        let value = node.value();
+        let children = node.children().map(SerNode::from).collect();
+        Self { value, children }
     }
 }
 
