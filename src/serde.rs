@@ -1,82 +1,48 @@
-use std::num::NonZeroUsize;
+use serde::ser::{Serialize, SerializeStruct};
 
-use serde::{Deserialize, Serialize};
+use crate::{NodeRef, Tree};
 
-use crate::{Node, NodeId, Tree};
+#[derive(Debug)]
+struct SerNode<'a, T> {
+    value: &'a T,
+    children: Vec<SerNode<'a, T>>,
+}
+
+impl<'a, T> From<NodeRef<'a, T>> for SerNode<'a, T> {
+    fn from(node: NodeRef<'a, T>) -> Self {
+        let value: &T = node.value();
+        let children: Vec<SerNode<'a, T>> = node.children().map(SerNode::<'a, T>::from).collect();
+        SerNode { value, children }
+    }
+}
+
+impl<'a, T: Serialize> Serialize for SerNode<'a, T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        (&self.value, &self.children).serialize(serializer)
+    }
+}
 
 impl<T: Serialize> Serialize for Tree<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        self.vec.serialize(serializer)
+        SerNode::from(self.root()).serialize(serializer)
     }
 }
 
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Tree<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let vec = Vec::deserialize(deserializer)?;
-        Ok(Tree { vec })
-    }
-}
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::tree;
 
-impl<T: Serialize> Serialize for Node<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        (
-            &self.parent,
-            &self.prev_sibling,
-            &self.next_sibling,
-            &self.children,
-            &self.value,
-        )
-            .serialize(serializer)
-    }
-}
-
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Node<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let (parent, prev_sibling, next_sibling, children, value) =
-            <(
-                Option<NodeId>,
-                Option<NodeId>,
-                Option<NodeId>,
-                Option<(NodeId, NodeId)>,
-                T,
-            )>::deserialize(deserializer)?;
-        Ok(Node {
-            parent,
-            prev_sibling,
-            next_sibling,
-            children,
-            value,
-        })
-    }
-}
-
-impl Serialize for NodeId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for NodeId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let index = <NonZeroUsize>::deserialize(deserializer)?;
-        Ok(NodeId(index))
+    #[test]
+    fn test_ser_node_from() {
+        let tree = tree!("a" => {"b", "c" => {"d", "e"}, "f"});
+        let repr = serde_json::to_string(&SerNode::from(tree.root())).unwrap();
+        println!("{repr}");
     }
 }

@@ -8,7 +8,4 @@ fn test_serialize() {
 
     let serialized = serde_json::to_string(&tree).unwrap();
     println!("{serialized}");
-    let deserialized: Tree<&str> = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(tree, deserialized);
 }
