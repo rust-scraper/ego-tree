@@ -1,5 +1,7 @@
 #![cfg(feature = "serde")]
 
+use std::io::Read;
+
 use ego_tree::{tree, Tree};
 use serde_test::{assert_tokens, Token};
 
@@ -98,7 +100,9 @@ fn test_internal_serde_repr() {
 #[test]
 fn test_hypercomlex_json_tree() {
     let infile = std::fs::File::open("data/tree.json").expect("Faile to open tree.json");
+
     let tree: Tree<String> =
         serde_json::from_reader(infile).expect("Failed to deserialize the tree in tree.json");
-    print!("{tree}");
+
+    println!("{tree}");
 }
