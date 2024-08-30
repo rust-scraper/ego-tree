@@ -1,7 +1,5 @@
 #![cfg(feature = "serde")]
 
-use std::io::Read;
-
 use ego_tree::{tree, Tree};
 use serde_test::{assert_tokens, Token};
 
