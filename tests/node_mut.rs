@@ -312,6 +312,34 @@ fn detach() {
 }
 
 #[test]
+#[should_panic(expected = "Cannot append node as a child to itself")]
+fn append_id_itself() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'c', 'd' },
+            'e' => { 'f', 'g' },
+        }
+    };
+    let mut a = tree.root_mut();
+    let mut e = a.last_child().unwrap();
+    e.append_id(e.id());
+}
+
+#[test]
+#[should_panic(expected = "Cannot prepend node as a child to itself")]
+fn prepend_id_itself() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'c', 'd' },
+            'e' => { 'f', 'g' },
+        }
+    };
+    let mut a = tree.root_mut();
+    let mut e = a.last_child().unwrap();
+    e.prepend_id(e.id());
+}
+
+#[test]
 fn reparent_from_id_append() {
     let mut tree = tree! {
         'a' => {
