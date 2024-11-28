@@ -182,6 +182,32 @@ fn test_map_values() {
 }
 
 #[test]
+fn test_map_value_refs() {
+    let str_tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+            },
+            "b" => {
+                "child 2",
+            },
+        }
+    };
+
+    let identity_mapped_tree = str_tree.map_value_refs(|&value| value);
+
+    // If we pass the identity function to `.map_values()`,
+    // then we expect the tree to effectively remain untouched:
+    assert_eq!(str_tree, identity_mapped_tree);
+
+    let string_tree = str_tree.map_value_refs(|&value| value.to_owned());
+
+    // A `&str` will produce the same output for `.to_string()` as its equivalent `String`,
+    // so the output of `.to_string()` should match for corresponding trees as well:
+    assert_eq!(str_tree.to_string(), string_tree.to_string());
+}
+
+#[test]
 fn test_display() {
     let tree = tree! {
         "root" => {

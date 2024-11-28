@@ -104,6 +104,16 @@ impl<T> Node<T> {
             value: transform(self.value),
         }
     }
+
+    fn map_value_ref<U>(&self, transform: impl FnOnce(&T) -> U) -> Node<U> {
+        Node {
+            parent: self.parent,
+            prev_sibling: self.prev_sibling,
+            next_sibling: self.next_sibling,
+            children: self.children,
+            value: transform(&self.value),
+        }
+    }
 }
 
 /// Node reference.
@@ -244,13 +254,25 @@ impl<T> Tree<T> {
     }
 
     /// Maps a `Tree<T>` to `Tree<U>` by applying a function to all node values,
-    /// without modifying the nodes' ids, or the tree's structure.
+    /// copying over the tree's structure and node ids untouched, consuming `self`.
     pub fn map_values<U>(self, transform: impl Fn(T) -> U) -> Tree<U> {
         Tree {
             vec: self
                 .vec
                 .into_iter()
                 .map(|node| node.map_value(&transform))
+                .collect(),
+        }
+    }
+
+    /// Maps a `&Tree<T>` to `Tree<U>` by applying a function to all node values,
+    /// copying over the tree's structure and node ids untouched.
+    pub fn map_value_refs<U>(&self, transform: impl Fn(&T) -> U) -> Tree<U> {
+        Tree {
+            vec: self
+                .vec
+                .iter()
+                .map(|node| node.map_value_ref(&transform))
                 .collect(),
         }
     }
