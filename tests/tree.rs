@@ -168,13 +168,13 @@ fn test_map_values() {
         }
     };
 
-    let identity_mapped_tree = str_tree.clone().map_values(|value| value);
+    let identity_mapped_tree = str_tree.clone().map(|value| value);
 
     // If we pass the identity function to `.map_values()`,
     // then we expect the tree to effectively remain untouched:
     assert_eq!(str_tree, identity_mapped_tree);
 
-    let string_tree = str_tree.clone().map_values(|value| value.to_owned());
+    let string_tree = str_tree.clone().map(|value| value.to_owned());
 
     // A `&str` will produce the same output for `.to_string()` as its equivalent `String`,
     // so the output of `.to_string()` should match for corresponding trees as well:
@@ -194,13 +194,13 @@ fn test_map_value_refs() {
         }
     };
 
-    let identity_mapped_tree = str_tree.map_value_refs(|&value| value);
+    let identity_mapped_tree = str_tree.map_ref(|&value| value);
 
     // If we pass the identity function to `.map_values()`,
     // then we expect the tree to effectively remain untouched:
     assert_eq!(str_tree, identity_mapped_tree);
 
-    let string_tree = str_tree.map_value_refs(|&value| value.to_owned());
+    let string_tree = str_tree.map_ref(|&value| value.to_owned());
 
     // A `&str` will produce the same output for `.to_string()` as its equivalent `String`,
     // so the output of `.to_string()` should match for corresponding trees as well:

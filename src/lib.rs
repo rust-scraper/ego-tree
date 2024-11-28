@@ -95,7 +95,7 @@ impl<T> Node<T> {
         }
     }
 
-    fn map_value<U>(self, mut transform: impl FnMut(T) -> U) -> Node<U> {
+    fn map<U>(self, mut transform: impl FnMut(T) -> U) -> Node<U> {
         Node {
             parent: self.parent,
             prev_sibling: self.prev_sibling,
@@ -105,7 +105,7 @@ impl<T> Node<T> {
         }
     }
 
-    fn map_value_ref<U>(&self, mut transform: impl FnMut(&T) -> U) -> Node<U> {
+    fn map_ref<U>(&self, mut transform: impl FnMut(&T) -> U) -> Node<U> {
         Node {
             parent: self.parent,
             prev_sibling: self.prev_sibling,
@@ -255,24 +255,24 @@ impl<T> Tree<T> {
 
     /// Maps a `Tree<T>` to `Tree<U>` by applying a function to all node values,
     /// copying over the tree's structure and node ids untouched, consuming `self`.
-    pub fn map_values<U>(self, mut transform: impl FnMut(T) -> U) -> Tree<U> {
+    pub fn map<U>(self, mut transform: impl FnMut(T) -> U) -> Tree<U> {
         Tree {
             vec: self
                 .vec
                 .into_iter()
-                .map(|node| node.map_value(&mut transform))
+                .map(|node| node.map(&mut transform))
                 .collect(),
         }
     }
 
     /// Maps a `&Tree<T>` to `Tree<U>` by applying a function to all node values,
     /// copying over the tree's structure and node ids untouched.
-    pub fn map_value_refs<U>(&self, mut transform: impl FnMut(&T) -> U) -> Tree<U> {
+    pub fn map_ref<U>(&self, mut transform: impl FnMut(&T) -> U) -> Tree<U> {
         Tree {
             vec: self
                 .vec
                 .iter()
-                .map(|node| node.map_value_ref(&mut transform))
+                .map(|node| node.map_ref(&mut transform))
                 .collect(),
         }
     }
