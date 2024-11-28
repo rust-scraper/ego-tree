@@ -94,6 +94,16 @@ impl<T> Node<T> {
             value,
         }
     }
+
+    fn map_value<U>(self, transform: impl FnOnce(T) -> U) -> Node<U> {
+        Node {
+            parent: self.parent,
+            prev_sibling: self.prev_sibling,
+            next_sibling: self.next_sibling,
+            children: self.children,
+            value: transform(self.value),
+        }
+    }
 }
 
 /// Node reference.
@@ -231,6 +241,18 @@ impl<T> Tree<T> {
         }
         self.vec.extend(other_tree.vec);
         unsafe { self.get_unchecked_mut(other_tree_root_id) }
+    }
+
+    /// Maps a `Tree<T>` to `Tree<U>` by applying a function to all node values,
+    /// without modifying the nodes' ids, or the tree's structure.
+    pub fn map_values<U>(self, transform: impl Fn(T) -> U) -> Tree<U> {
+        Tree {
+            vec: self
+                .vec
+                .into_iter()
+                .map(|node| node.map_value(&transform))
+                .collect(),
+        }
     }
 }
 
