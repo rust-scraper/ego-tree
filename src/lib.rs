@@ -550,6 +550,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if `new_child_id` is not valid.
     pub fn append_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+        assert_ne!(
+            self.id(),
+            new_child_id,
+            "Cannot append node as a child to itself"
+        );
+
         let last_child_id = self.node().children.map(|(_, id)| id);
         {
             let mut new_child = self.tree.get_mut(new_child_id).unwrap();
@@ -565,11 +571,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         }
 
         {
-            if let Some((first_child_id, _)) = self.node().children {
-                self.node().children = Some((first_child_id, new_child_id));
-            } else {
-                self.node().children = Some((new_child_id, new_child_id));
-            }
+            self.node().children = match self.node().children {
+                Some((first_child_id, _)) => Some((first_child_id, new_child_id)),
+                None => Some((new_child_id, new_child_id)),
+            };
         }
 
         unsafe { self.tree.get_unchecked_mut(new_child_id) }
@@ -581,6 +586,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if `new_child_id` is not valid.
     pub fn prepend_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+        assert_ne!(
+            self.id(),
+            new_child_id,
+            "Cannot prepend node as a child to itself"
+        );
+
         let first_child_id = self.node().children.map(|(id, _)| id);
         {
             let mut new_child = self.tree.get_mut(new_child_id).unwrap();
@@ -596,11 +607,10 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         }
 
         {
-            if let Some((_, last_child_id)) = self.node().children {
-                self.node().children = Some((new_child_id, last_child_id));
-            } else {
-                self.node().children = Some((new_child_id, new_child_id));
-            }
+            self.node().children = match self.node().children {
+                Some((_, last_child_id)) => Some((new_child_id, last_child_id)),
+                None => Some((new_child_id, new_child_id)),
+            };
         }
 
         unsafe { self.tree.get_unchecked_mut(new_child_id) }
@@ -613,6 +623,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
     pub fn insert_id_before(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+        assert_ne!(
+            self.id(),
+            new_sibling_id,
+            "Cannot insert node as a sibling of itself"
+        );
+
         let parent_id = self.node().parent.unwrap();
         let prev_sibling_id = self.node().prev_sibling;
 
@@ -650,6 +666,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
     pub fn insert_id_after(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+        assert_ne!(
+            self.id(),
+            new_sibling_id,
+            "Cannot insert node as a sibling of itself"
+        );
+
         let parent_id = self.node().parent.unwrap();
         let next_sibling_id = self.node().next_sibling;
 
@@ -686,6 +708,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if `from_id` is not valid.
     pub fn reparent_from_id_append(&mut self, from_id: NodeId) {
+        assert_ne!(
+            self.id(),
+            from_id,
+            "Cannot reparent node's children to itself"
+        );
+
         let new_child_ids = {
             let mut from = self.tree.get_mut(from_id).unwrap();
             match from.node().children.take() {
@@ -719,6 +747,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// Panics if `from_id` is not valid.
     pub fn reparent_from_id_prepend(&mut self, from_id: NodeId) {
+        assert_ne!(
+            self.id(),
+            from_id,
+            "Cannot reparent node's children to itself"
+        );
+
         let new_child_ids = {
             let mut from = self.tree.get_mut(from_id).unwrap();
             match from.node().children.take() {
