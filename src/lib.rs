@@ -94,6 +94,32 @@ impl<T> Node<T> {
             value,
         }
     }
+
+    pub fn map<F, U>(self, mut transform: F) -> Node<U>
+    where
+        F: FnMut(T) -> U,
+    {
+        Node {
+            parent: self.parent,
+            prev_sibling: self.prev_sibling,
+            next_sibling: self.next_sibling,
+            children: self.children,
+            value: transform(self.value),
+        }
+    }
+
+    pub fn map_ref<F, U>(&self, mut transform: F) -> Node<U>
+    where
+        F: FnMut(&T) -> U,
+    {
+        Node {
+            parent: self.parent,
+            prev_sibling: self.prev_sibling,
+            next_sibling: self.next_sibling,
+            children: self.children,
+            value: transform(&self.value),
+        }
+    }
 }
 
 /// Node reference.
@@ -231,6 +257,36 @@ impl<T> Tree<T> {
         }
         self.vec.extend(other_tree.vec);
         unsafe { self.get_unchecked_mut(other_tree_root_id) }
+    }
+
+    /// Maps a `Tree<T>` to `Tree<U>` by applying a function to all node values,
+    /// copying over the tree's structure and node ids untouched, consuming `self`.
+    pub fn map<F, U>(self, mut transform: F) -> Tree<U>
+    where
+        F: FnMut(T) -> U,
+    {
+        Tree {
+            vec: self
+                .vec
+                .into_iter()
+                .map(|node| node.map(&mut transform))
+                .collect(),
+        }
+    }
+
+    /// Maps a `&Tree<T>` to `Tree<U>` by applying a function to all node values,
+    /// copying over the tree's structure and node ids untouched.
+    pub fn map_ref<F, U>(&self, mut transform: F) -> Tree<U>
+    where
+        F: FnMut(&T) -> U,
+    {
+        Tree {
+            vec: self
+                .vec
+                .iter()
+                .map(|node| node.map_ref(&mut transform))
+                .collect(),
+        }
     }
 }
 

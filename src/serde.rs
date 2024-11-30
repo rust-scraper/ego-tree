@@ -28,7 +28,7 @@ impl<'a, T> From<NodeRef<'a, T>> for SerNode<'a, T> {
     }
 }
 
-impl<'a, T: Serialize> Serialize for SerNode<'a, T> {
+impl<T: Serialize> Serialize for SerNode<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
