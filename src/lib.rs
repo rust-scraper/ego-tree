@@ -557,24 +557,27 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         );
 
         let last_child_id = self.node().children.map(|(_, id)| id);
-        {
-            let mut new_child = self.tree.get_mut(new_child_id).unwrap();
-            new_child.detach();
-            new_child.node().parent = Some(self.id);
-            new_child.node().prev_sibling = last_child_id;
-        }
 
-        if let Some(id) = last_child_id {
-            unsafe {
-                self.tree.node_mut(id).next_sibling = Some(new_child_id);
+        if last_child_id != Some(new_child_id) {
+            {
+                let mut new_child = self.tree.get_mut(new_child_id).unwrap();
+                new_child.detach();
+                new_child.node().parent = Some(self.id);
+                new_child.node().prev_sibling = last_child_id;
             }
-        }
 
-        {
-            self.node().children = match self.node().children {
-                Some((first_child_id, _)) => Some((first_child_id, new_child_id)),
-                None => Some((new_child_id, new_child_id)),
-            };
+            if let Some(id) = last_child_id {
+                unsafe {
+                    self.tree.node_mut(id).next_sibling = Some(new_child_id);
+                }
+            }
+
+            {
+                self.node().children = match self.node().children {
+                    Some((first_child_id, _)) => Some((first_child_id, new_child_id)),
+                    None => Some((new_child_id, new_child_id)),
+                };
+            }
         }
 
         unsafe { self.tree.get_unchecked_mut(new_child_id) }
@@ -593,24 +596,27 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         );
 
         let first_child_id = self.node().children.map(|(id, _)| id);
-        {
-            let mut new_child = self.tree.get_mut(new_child_id).unwrap();
-            new_child.detach();
-            new_child.node().parent = Some(self.id);
-            new_child.node().next_sibling = first_child_id;
-        }
 
-        if let Some(id) = first_child_id {
-            unsafe {
-                self.tree.node_mut(id).prev_sibling = Some(new_child_id);
+        if first_child_id != Some(new_child_id) {
+            {
+                let mut new_child = self.tree.get_mut(new_child_id).unwrap();
+                new_child.detach();
+                new_child.node().parent = Some(self.id);
+                new_child.node().next_sibling = first_child_id;
             }
-        }
 
-        {
-            self.node().children = match self.node().children {
-                Some((_, last_child_id)) => Some((new_child_id, last_child_id)),
-                None => Some((new_child_id, new_child_id)),
-            };
+            if let Some(id) = first_child_id {
+                unsafe {
+                    self.tree.node_mut(id).prev_sibling = Some(new_child_id);
+                }
+            }
+
+            {
+                self.node().children = match self.node().children {
+                    Some((_, last_child_id)) => Some((new_child_id, last_child_id)),
+                    None => Some((new_child_id, new_child_id)),
+                };
+            }
         }
 
         unsafe { self.tree.get_unchecked_mut(new_child_id) }
