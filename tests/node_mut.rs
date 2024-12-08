@@ -326,6 +326,20 @@ fn append_id_itself() {
 }
 
 #[test]
+fn append_id_noop() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'c', 'd' },
+            'e' => { 'f', 'g' },
+        }
+    };
+    let mut a = tree.root_mut();
+    let e_id = a.last_child().unwrap().id();
+    a.append_id(e_id);
+    assert_eq!(a.first_child().unwrap().next_sibling().unwrap().id(), e_id);
+}
+
+#[test]
 #[should_panic(expected = "Cannot prepend node as a child to itself")]
 fn prepend_id_itself() {
     let mut tree = tree! {
@@ -337,6 +351,20 @@ fn prepend_id_itself() {
     let mut a = tree.root_mut();
     let mut e = a.last_child().unwrap();
     e.prepend_id(e.id());
+}
+
+#[test]
+fn prepend_id_noop() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'c', 'd' },
+            'e' => { 'f', 'g' },
+        }
+    };
+    let mut a = tree.root_mut();
+    let b_id = a.first_child().unwrap().id();
+    a.prepend_id(b_id);
+    assert_eq!(a.last_child().unwrap().prev_sibling().unwrap().id(), b_id);
 }
 
 #[test]
