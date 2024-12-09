@@ -12,7 +12,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use ego_tree::tree;
     ///
     /// let mut tree = tree!('a' => { 'd', 'c', 'b' });
@@ -36,7 +36,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use ego_tree::tree;
     ///
     /// let mut tree = tree!('a' => { 'c', 'd', 'b' });
@@ -87,7 +87,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use ego_tree::tree;
     ///
     /// let mut tree = tree!("1a" => { "2b", "4c", "3d" });
