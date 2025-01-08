@@ -360,8 +360,17 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         self.tree
     }
 
+    fn node(&self) -> &Node<T> {
+        unsafe { self.tree.node(self.id) }
+    }
+
     fn node_mut(&mut self) -> &mut Node<T> {
         unsafe { self.tree.node_mut(self.id) }
+    }
+
+    /// Returns a reference to the value of this node.
+    pub fn value(&self) -> &T {
+        &self.node().value
     }
 
     /// Returns a mutable reference to the value of this node.
