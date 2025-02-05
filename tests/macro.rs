@@ -163,3 +163,27 @@ fn mixed() {
 
     assert_eq!(manual_tree, macro_tree);
 }
+
+#[test]
+fn subtree() {
+    let subtree = tree! {
+        'x' => { 'y' => {'z'}}
+    };
+    let tree = tree! {
+        'a' => {
+            'b',
+            'c' => {'d', 'e'},
+            @ subtree.clone(),
+            'f' => { @subtree },
+        }
+    };
+    let expected_tree = tree! {
+        'a' => {
+            'b',
+            'c' => {'d', 'e'},
+            'x' => { 'y' => {'z'}},
+            'f' => {'x' => { 'y' => {'z'}} },
+        }
+    };
+    assert_eq!(tree, expected_tree);
+}

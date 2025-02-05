@@ -822,6 +822,22 @@ pub mod iter;
 /// };
 /// # }
 /// ```
+/// Compose trees using the `@` marker:
+/// ```
+/// #[macro_use] extern crate ego_tree;
+/// # fn main() {
+/// let subtree = tree! {
+///     "foo" => { "bar", "baz" }
+/// };
+/// let new_tree = tree! {
+///     "root" => {
+///         "child x",
+///         "child y",
+///         @ subtree,
+///     }
+/// };
+/// # }
+/// ```
 #[macro_export]
 macro_rules! tree {
     (@ $n:ident { }) => { };
@@ -857,6 +873,13 @@ macro_rules! tree {
             tree!(@ $n { $($tail)* });
         }
     };
+
+    // Append subtree from expression.
+    (@ $n:ident { @ $subtree:expr $(, $($tail:tt)*)? }) => {{
+        $n.append_subtree($subtree);
+        $( tree!(@ $n { $($tail)* }); )?
+    }};
+
 
     ($root:expr) => { $crate::Tree::new($root) };
 
