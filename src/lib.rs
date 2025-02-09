@@ -255,7 +255,7 @@ impl<T> Tree<T> {
                 *id2 = offset_id(*id2);
             });
         }
-        self.vec.extend(other_tree.vec);
+        self.vec.append(&mut other_tree.vec);
         unsafe { self.get_unchecked_mut(other_tree_root_id) }
     }
 
