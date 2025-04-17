@@ -369,6 +369,11 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         &mut self.node().value
     }
 
+    /// Downcast `NodeMut` to `NodeRef`.
+    pub fn as_ref(&mut self) -> NodeRef<'_, T> {
+        unsafe { self.tree.get_unchecked(self.id) }
+    }
+
     fn axis<F>(&mut self, f: F) -> Option<NodeMut<T>>
     where
         F: FnOnce(&mut Node<T>) -> Option<NodeId>,
@@ -461,6 +466,116 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Returns true if this node has children.
     pub fn has_children(&self) -> bool {
         unsafe { self.tree.get_unchecked(self.id).has_children() }
+    }
+
+    /// Apply function for each ancestor mutable node reference.
+    pub fn for_each_ancestor<'b, F>(&'b mut self, mut f: F)
+    where
+        F: FnMut(&mut NodeMut<'b, T>),
+    {
+        let mut current = self.parent();
+        while let Some(mut node) = current {
+            f(&mut node);
+            current = node.into_parent().ok();
+        }
+    }
+
+    /// Apply function for each next sibling mutable node reference.
+    pub fn for_each_next_sibling<'b, F>(&'b mut self, mut f: F)
+    where
+        F: FnMut(&mut NodeMut<'b, T>),
+    {
+        let mut current = self.next_sibling();
+        while let Some(mut node) = current {
+            f(&mut node);
+            current = node.into_next_sibling().ok();
+        }
+    }
+
+    /// Apply function for each previout sibling mutable node reference.
+    pub fn for_each_prev_sibling<'b, F>(&'b mut self, mut f: F)
+    where
+        F: FnMut(&mut NodeMut<'b, T>),
+    {
+        let mut current = self.prev_sibling();
+        while let Some(mut node) = current {
+            f(&mut node);
+            current = node.into_prev_sibling().ok();
+        }
+    }
+
+    /// Apply function for this node and each sibling mutable node reference.
+    pub fn for_each_sibling<F>(&mut self, mut f: F)
+    where
+        F: for<'b> FnMut(&mut NodeMut<'b, T>),
+    {
+        self.for_each_prev_sibling(&mut f);
+        f(self);
+        self.for_each_next_sibling(&mut f);
+    }
+
+    /// Apply function for each children mutable node reference.
+    pub fn for_each_child<F>(&mut self, mut f: F)
+    where
+        F: for<'b> FnMut(&mut NodeMut<'b, T>),
+    {
+        let Some(mut first_child) = self.first_child() else {
+            return;
+        };
+        f(&mut first_child);
+        first_child.for_each_next_sibling(f);
+    }
+
+    /// Apply function for this node and each descendant mutable node reference.
+    pub fn for_each_descendant<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut NodeMut<'_, T>),
+    {
+        let id = self.id();
+
+        f(self);
+
+        // Start at our first child, if any.
+        let Some(mut node) = self.first_child() else {
+            return;
+        };
+
+        loop {
+            f(&mut node);
+
+            // Try to go deeper into its first child.
+            match node.into_first_child() {
+                Ok(child) => {
+                    node = child;
+                    continue;
+                }
+                Err(n) => {
+                    node = n;
+                }
+            }
+
+            // No deeper child, so climb until we find a next sibling or hit self.
+            loop {
+                match node.into_next_sibling() {
+                    Ok(sib) => {
+                        node = sib;
+                        break;
+                    }
+                    Err(n) => {
+                        node = n;
+                    }
+                }
+
+                // No sibling, so climb up.
+                let Ok(parent) = node.into_parent() else {
+                    unreachable!();
+                };
+                if parent.id() == id {
+                    return;
+                }
+                node = parent;
+            }
+        }
     }
 
     /// Appends a new child to this node.

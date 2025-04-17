@@ -75,6 +75,77 @@ fn has_children() {
 }
 
 #[test]
+fn for_each_next_sibling() {
+    let mut tree = tree!(1 => { 2, 3, 4, 5, 6 });
+    let mut root = tree.root_mut();
+    let mut c = root.first_child().unwrap();
+
+    c.for_each_next_sibling(|n| {
+        *n.value() += 1;
+    });
+
+    let res = tree!(1 => { 2, 4, 5, 6, 7 });
+
+    assert_eq!(tree, res);
+}
+
+#[test]
+fn for_each_prev_sibling() {
+    let mut tree = tree!(1 => { 2, 3, 4, 5, 6 });
+    let mut root = tree.root_mut();
+    let mut c = root.last_child().unwrap();
+
+    c.for_each_prev_sibling(|n| {
+        *n.value() += 1;
+    });
+
+    let res = tree!(1 => { 3, 4, 5, 6, 6 });
+
+    assert_eq!(tree, res);
+}
+
+#[test]
+fn for_each_sibling() {
+    let rt = 2;
+    let mut tree = tree!(rt => { 2, 3, 4, 5, 6 });
+    let mut root = tree.root_mut();
+    let mut c = root.last_child().unwrap();
+
+    c.for_each_sibling(|n| {
+        let v = n.parent().map(|mut p| *p.value()).unwrap();
+        *n.value() += v;
+    });
+
+    let res = tree!(rt => { 4, 5, 6, 7, 8 });
+
+    assert_eq!(tree, res);
+}
+
+#[test]
+fn for_each_child() {
+    let mut tree = tree!(1 => { 2, 3, 4, 5, 6 });
+    let mut root = tree.root_mut();
+    root.for_each_child(|n| *n.value() += 1);
+
+    assert_eq!(*root.value(), 1);
+
+    let res = tree!(1 => { 3, 4, 5, 6, 7 });
+
+    assert_eq!(tree, res);
+}
+
+#[test]
+fn for_each_descendant() {
+    let mut tree = tree!(1 => { 2 => {3, 4, 5, 6}, 3, 4 => {0, 1}, 5, 6 => {1, 2} });
+    let mut root = tree.root_mut();
+    root.for_each_descendant(|n| *n.value() += 1);
+
+    let tree2 = tree!(2 => { 3 => {4, 5, 6, 7}, 4, 5 => {1, 2}, 6, 7 => {2, 3} });
+
+    assert_eq!(tree, tree2);
+}
+
+#[test]
 fn append_1() {
     let mut tree = tree!('a');
     tree.root_mut().append('b');
