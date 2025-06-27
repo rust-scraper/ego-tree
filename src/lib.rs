@@ -401,7 +401,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Downcast `NodeMut` to `NodeRef`.
-    pub fn as_ref(&mut self) -> NodeRef<'_, T> {
+    pub fn as_ref(&self) -> NodeRef<'_, T> {
         unsafe { self.tree.get_unchecked(self.id) }
     }
 
