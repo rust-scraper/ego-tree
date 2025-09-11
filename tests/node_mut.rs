@@ -512,10 +512,10 @@ fn reparent_from_id_append_multiple_siblings() {
         .reparent_from_id_append(c_id);
 
     let b = tree.get(b_id).unwrap();
-    let x = b.first_child().unwrap();  // original child of b
-    let d = x.next_sibling().unwrap();  // first reparented child
-    let e = d.next_sibling().unwrap();  // middle reparented child
-    let f = e.next_sibling().unwrap();  // last reparented child
+    let x = b.first_child().unwrap(); // original child of b
+    let d = x.next_sibling().unwrap(); // first reparented child
+    let e = d.next_sibling().unwrap(); // middle reparented child
+    let f = e.next_sibling().unwrap(); // last reparented child
 
     // All children should now have 'b' as their parent
     assert_eq!(Some(b), x.parent());
@@ -544,7 +544,7 @@ fn reparent_from_id_prepend_multiple_siblings() {
         .reparent_from_id_prepend(c_id);
 
     let b = tree.get(b_id).unwrap();
-    let d = b.first_child().unwrap();  // first reparented child
+    let d = b.first_child().unwrap(); // first reparented child
     let e = d.next_sibling().unwrap(); // middle reparented child
     let f = e.next_sibling().unwrap(); // last reparented child
     let x = f.next_sibling().unwrap(); // original child of b
