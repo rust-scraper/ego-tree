@@ -843,9 +843,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         };
 
-        unsafe {
-            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
-            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        // Update parent for all siblings in the chain
+        let mut child_id = new_child_ids.0;
+        loop {
+            unsafe { self.tree.node_mut(child_id).parent = Some(self.id); }
+            if child_id == new_child_ids.1 { break; }
+            child_id = unsafe { self.tree.node_mut(child_id).next_sibling.unwrap() };
         }
 
         if self.node().children.is_none() {
@@ -882,9 +885,12 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         };
 
-        unsafe {
-            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
-            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        // Update parent for all siblings in the chain
+        let mut child_id = new_child_ids.0;
+        loop {
+            unsafe { self.tree.node_mut(child_id).parent = Some(self.id); }
+            if child_id == new_child_ids.1 { break; }
+            child_id = unsafe { self.tree.node_mut(child_id).next_sibling.unwrap() };
         }
 
         if self.node().children.is_none() {
