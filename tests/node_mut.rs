@@ -493,6 +493,70 @@ fn reparent_from_id_prepend() {
 }
 
 #[test]
+fn reparent_from_id_append_multiple_siblings() {
+    // Test reparenting when source has 3+ children to ensure all siblings get proper parent update
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'x' },  // destination node
+            'c' => { 'd', 'e', 'f' },  // source node with 3 children
+        }
+    };
+
+    let c_id = tree.root().last_child().unwrap().id();
+    let b_id = tree.root().first_child().unwrap().id();
+
+    // Reparent children from 'c' to 'b'
+    tree.root_mut()
+        .first_child()
+        .unwrap()
+        .reparent_from_id_append(c_id);
+
+    let b = tree.get(b_id).unwrap();
+    let x = b.first_child().unwrap(); // original child of b
+    let d = x.next_sibling().unwrap(); // first reparented child
+    let e = d.next_sibling().unwrap(); // middle reparented child
+    let f = e.next_sibling().unwrap(); // last reparented child
+
+    // All children should now have 'b' as their parent
+    assert_eq!(Some(b), x.parent());
+    assert_eq!(Some(b), d.parent());
+    assert_eq!(Some(b), e.parent());
+    assert_eq!(Some(b), f.parent());
+}
+
+#[test]
+fn reparent_from_id_prepend_multiple_siblings() {
+    // Test reparenting when source has 3+ children to ensure all siblings get proper parent update
+    let mut tree = tree! {
+        'a' => {
+            'b' => { 'x' },  // destination node
+            'c' => { 'd', 'e', 'f' },  // source node with 3 children
+        }
+    };
+
+    let c_id = tree.root().last_child().unwrap().id();
+    let b_id = tree.root().first_child().unwrap().id();
+
+    // Reparent children from 'c' to 'b'
+    tree.root_mut()
+        .first_child()
+        .unwrap()
+        .reparent_from_id_prepend(c_id);
+
+    let b = tree.get(b_id).unwrap();
+    let d = b.first_child().unwrap(); // first reparented child
+    let e = d.next_sibling().unwrap(); // middle reparented child
+    let f = e.next_sibling().unwrap(); // last reparented child
+    let x = f.next_sibling().unwrap(); // original child of b
+
+    // All children should now have 'b' as their parent
+    assert_eq!(Some(b), d.parent());
+    assert_eq!(Some(b), e.parent());
+    assert_eq!(Some(b), f.parent());
+    assert_eq!(Some(b), x.parent());
+}
+
+#[test]
 fn into() {
     let mut tree = tree!('a');
     let node_ref: NodeRef<_> = tree.root_mut().into();

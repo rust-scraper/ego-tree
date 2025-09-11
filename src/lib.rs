@@ -178,7 +178,7 @@ impl<T> Tree<T> {
     }
 
     /// Returns a reference to the specified node.
-    pub fn get(&self, id: NodeId) -> Option<NodeRef<T>> {
+    pub fn get(&self, id: NodeId) -> Option<NodeRef<'_, T>> {
         self.vec.get(id.to_index()).map(|node| NodeRef {
             id,
             node,
@@ -187,7 +187,7 @@ impl<T> Tree<T> {
     }
 
     /// Returns a mutator of the specified node.
-    pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<T>> {
+    pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<'_, T>> {
         let exists = self.vec.get(id.to_index()).map(|_| ());
         exists.map(move |_| NodeMut { id, tree: self })
     }
@@ -203,7 +203,7 @@ impl<T> Tree<T> {
     /// Returns a reference to the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<T> {
+    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> {
         NodeRef {
             id,
             node: self.node(id),
@@ -214,22 +214,22 @@ impl<T> Tree<T> {
     /// Returns a mutator of the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked_mut(&mut self, id: NodeId) -> NodeMut<T> {
+    pub unsafe fn get_unchecked_mut(&mut self, id: NodeId) -> NodeMut<'_, T> {
         NodeMut { id, tree: self }
     }
 
     /// Returns a reference to the root node.
-    pub fn root(&self) -> NodeRef<T> {
+    pub fn root(&self) -> NodeRef<'_, T> {
         unsafe { self.get_unchecked(NodeId::from_index(0)) }
     }
 
     /// Returns a mutator of the root node.
-    pub fn root_mut(&mut self) -> NodeMut<T> {
+    pub fn root_mut(&mut self) -> NodeMut<'_, T> {
         unsafe { self.get_unchecked_mut(NodeId::from_index(0)) }
     }
 
     /// Creates an orphan node.
-    pub fn orphan(&mut self, value: T) -> NodeMut<T> {
+    pub fn orphan(&mut self, value: T) -> NodeMut<'_, T> {
         let id = unsafe { NodeId::from_index(self.vec.len()) };
         self.vec.push(Node::new(value));
         unsafe { self.get_unchecked_mut(id) }
@@ -238,7 +238,7 @@ impl<T> Tree<T> {
     /// Merge with another tree as orphan, returning the new root of tree being merged.
     // Allowing this for compactness.
     #[allow(clippy::option_map_unit_fn)]
-    pub fn extend_tree(&mut self, mut other_tree: Tree<T>) -> NodeMut<T> {
+    pub fn extend_tree(&mut self, mut other_tree: Tree<T>) -> NodeMut<'_, T> {
         let offset = self.vec.len();
         let offset_id = |id: NodeId| -> NodeId {
             let old_index = id.to_index();
@@ -374,7 +374,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
         unsafe { self.tree.get_unchecked(self.id) }
     }
 
-    fn axis<F>(&mut self, f: F) -> Option<NodeMut<T>>
+    fn axis<F>(&mut self, f: F) -> Option<NodeMut<'_, T>>
     where
         F: FnOnce(&mut Node<T>) -> Option<NodeId>,
     {
@@ -394,7 +394,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the parent of this node.
-    pub fn parent(&mut self) -> Option<NodeMut<T>> {
+    pub fn parent(&mut self) -> Option<NodeMut<'_, T>> {
         self.axis(|node| node.parent)
     }
 
@@ -407,7 +407,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the previous sibling of this node.
-    pub fn prev_sibling(&mut self) -> Option<NodeMut<T>> {
+    pub fn prev_sibling(&mut self) -> Option<NodeMut<'_, T>> {
         self.axis(|node| node.prev_sibling)
     }
 
@@ -420,7 +420,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the next sibling of this node.
-    pub fn next_sibling(&mut self) -> Option<NodeMut<T>> {
+    pub fn next_sibling(&mut self) -> Option<NodeMut<'_, T>> {
         self.axis(|node| node.next_sibling)
     }
 
@@ -433,7 +433,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the first child of this node.
-    pub fn first_child(&mut self) -> Option<NodeMut<T>> {
+    pub fn first_child(&mut self) -> Option<NodeMut<'_, T>> {
         self.axis(|node| node.children.map(|(id, _)| id))
     }
 
@@ -446,7 +446,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the last child of this node.
-    pub fn last_child(&mut self) -> Option<NodeMut<T>> {
+    pub fn last_child(&mut self) -> Option<NodeMut<'_, T>> {
         self.axis(|node| node.children.map(|(_, id)| id))
     }
 
@@ -579,25 +579,25 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Appends a new child to this node.
-    pub fn append(&mut self, value: T) -> NodeMut<T> {
+    pub fn append(&mut self, value: T) -> NodeMut<'_, T> {
         let id = self.tree.orphan(value).id;
         self.append_id(id)
     }
 
     /// Prepends a new child to this node.
-    pub fn prepend(&mut self, value: T) -> NodeMut<T> {
+    pub fn prepend(&mut self, value: T) -> NodeMut<'_, T> {
         let id = self.tree.orphan(value).id;
         self.prepend_id(id)
     }
 
     /// Appends a subtree, return the root of the merged subtree.
-    pub fn append_subtree(&mut self, subtree: Tree<T>) -> NodeMut<T> {
+    pub fn append_subtree(&mut self, subtree: Tree<T>) -> NodeMut<'_, T> {
         let root_id = self.tree.extend_tree(subtree).id;
         self.append_id(root_id)
     }
 
     /// Prepends a subtree, return the root of the merged subtree.
-    pub fn prepend_subtree(&mut self, subtree: Tree<T>) -> NodeMut<T> {
+    pub fn prepend_subtree(&mut self, subtree: Tree<T>) -> NodeMut<'_, T> {
         let root_id = self.tree.extend_tree(subtree).id;
         self.prepend_id(root_id)
     }
@@ -607,7 +607,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if this node is an orphan.
-    pub fn insert_before(&mut self, value: T) -> NodeMut<T> {
+    pub fn insert_before(&mut self, value: T) -> NodeMut<'_, T> {
         let id = self.tree.orphan(value).id;
         self.insert_id_before(id)
     }
@@ -617,7 +617,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if this node is an orphan.
-    pub fn insert_after(&mut self, value: T) -> NodeMut<T> {
+    pub fn insert_after(&mut self, value: T) -> NodeMut<'_, T> {
         let id = self.tree.orphan(value).id;
         self.insert_id_after(id)
     }
@@ -664,7 +664,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `new_child_id` is not valid.
-    pub fn append_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+    pub fn append_id(&mut self, new_child_id: NodeId) -> NodeMut<'_, T> {
         assert_ne!(
             self.id(),
             new_child_id,
@@ -703,7 +703,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `new_child_id` is not valid.
-    pub fn prepend_id(&mut self, new_child_id: NodeId) -> NodeMut<T> {
+    pub fn prepend_id(&mut self, new_child_id: NodeId) -> NodeMut<'_, T> {
         assert_ne!(
             self.id(),
             new_child_id,
@@ -743,7 +743,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
-    pub fn insert_id_before(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+    pub fn insert_id_before(&mut self, new_sibling_id: NodeId) -> NodeMut<'_, T> {
         assert_ne!(
             self.id(),
             new_sibling_id,
@@ -786,7 +786,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
-    pub fn insert_id_after(&mut self, new_sibling_id: NodeId) -> NodeMut<T> {
+    pub fn insert_id_after(&mut self, new_sibling_id: NodeId) -> NodeMut<'_, T> {
         assert_ne!(
             self.id(),
             new_sibling_id,
@@ -843,9 +843,14 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         };
 
-        unsafe {
-            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
-            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        let mut child_id = new_child_ids.0;
+        loop {
+            let child = unsafe { self.tree.node_mut(child_id) };
+            child.parent = Some(self.id);
+            child_id = match child.next_sibling {
+                Some(id) => id,
+                None => break,
+            };
         }
 
         if self.node().children.is_none() {
@@ -882,9 +887,14 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             }
         };
 
-        unsafe {
-            self.tree.node_mut(new_child_ids.0).parent = Some(self.id);
-            self.tree.node_mut(new_child_ids.1).parent = Some(self.id);
+        let mut child_id = new_child_ids.0;
+        loop {
+            let child = unsafe { self.tree.node_mut(child_id) };
+            child.parent = Some(self.id);
+            child_id = match child.next_sibling {
+                Some(id) => id,
+                None => break,
+            };
         }
 
         if self.node().children.is_none() {

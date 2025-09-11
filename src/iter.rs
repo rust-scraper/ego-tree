@@ -114,17 +114,17 @@ impl<T> IntoIterator for Tree<T> {
 
 impl<T> Tree<T> {
     /// Returns an iterator over values in insert order.
-    pub fn values(&self) -> Values<T> {
+    pub fn values(&self) -> Values<'_, T> {
         Values(self.vec.iter())
     }
 
     /// Returns a mutable iterator over values in insert order.
-    pub fn values_mut(&mut self) -> ValuesMut<T> {
+    pub fn values_mut(&mut self) -> ValuesMut<'_, T> {
         ValuesMut(self.vec.iter_mut())
     }
 
     /// Returns an iterator over nodes in insert order.
-    pub fn nodes(&self) -> Nodes<T> {
+    pub fn nodes(&self) -> Nodes<'_, T> {
         Nodes {
             tree: self,
             iter: 0..self.vec.len(),
