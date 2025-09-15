@@ -290,6 +290,29 @@ impl<T> Tree<T> {
     }
 }
 
+impl<T: Clone> Tree<T> {
+    /// Clones the node deeply and creates a new tree.
+    /// Skips orphaned nodes.
+    pub fn deep_clone(&self, id: NodeId) -> Self {
+        let start_node = unsafe { self.get_unchecked(id) };
+        let mut result = Self::new(start_node.value().clone());
+
+        let mut queue = std::collections::VecDeque::<(NodeId, NodeId)>::new();
+        queue.push_back((id, result.root().id));
+
+        while let Some((src_id, dst_id)) = queue.pop_front() {
+            let src = unsafe { self.get_unchecked(src_id) };
+            let mut dst = unsafe { result.get_unchecked_mut(dst_id) };
+            for src_child in src.children() {
+                let dst_child_id = dst.append(src_child.value().clone()).id;
+                queue.push_back((src_child.id, dst_child_id));
+            }
+        }
+
+        result
+    }
+}
+
 impl<'a, T: 'a> NodeRef<'a, T> {
     /// Returns the ID of this node.
     pub fn id(&self) -> NodeId {
@@ -349,6 +372,14 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     }
 }
 
+impl<'a, T: 'a + Clone> NodeRef<'a, T> {
+    /// Clones the node deeply and creates a new tree.
+    /// Skips orphaned nodes.
+    pub fn deep_clone(&self) -> Tree<T> {
+        self.tree.deep_clone(self.id)
+    }
+}
+
 impl<'a, T: 'a> NodeMut<'a, T> {
     /// Returns the ID of this node.
     pub fn id(&self) -> NodeId {
@@ -370,7 +401,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Downcast `NodeMut` to `NodeRef`.
-    pub fn as_ref(&mut self) -> NodeRef<'_, T> {
+    pub fn as_ref(&self) -> NodeRef<'_, T> {
         unsafe { self.tree.get_unchecked(self.id) }
     }
 

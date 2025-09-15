@@ -238,3 +238,60 @@ fn test_display() {
 
     assert_eq!(repr, expected);
 }
+
+#[test]
+fn clone_subtree() {
+    let mut tree = tree! {
+        "root" => {
+            "a" => {
+                "child 1",
+                "child 2",
+                "child 3" => {
+                    "child child 1",
+                    "child child 2",
+                    "child child 3",
+                    "child child 4",
+                },
+            },
+            "b" => {
+                "child 4",
+            },
+        }
+    };
+
+    let test_node_id = tree.root().first_child().unwrap().id();
+    let test_subtree = tree.deep_clone(test_node_id);
+
+    assert_eq!(
+        test_subtree,
+        tree! {
+            "a" => {
+                "child 1",
+                "child 2",
+                "child 3" => {
+                    "child child 1",
+                    "child child 2",
+                    "child child 3",
+                    "child child 4",
+                },
+            }
+        }
+    );
+
+    tree.root_mut()
+        .first_child()
+        .unwrap()
+        .last_child()
+        .unwrap()
+        .detach();
+    let test_subtree = tree.deep_clone(test_node_id);
+    assert_eq!(
+        test_subtree,
+        tree! {
+            "a" => {
+                "child 1",
+                "child 2",
+            }
+        }
+    );
+}
