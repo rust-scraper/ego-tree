@@ -562,3 +562,48 @@ fn into() {
     let node_ref: NodeRef<_> = tree.root_mut().into();
     assert_eq!(&'a', node_ref.value());
 }
+
+#[test]
+fn test_clone_subtree() {
+    let mut tree = tree! {
+        'a' => {
+            'b' => {
+                'd',
+                'e' => { 'g', 'h' },
+                'f',
+            },
+            'c',
+        }
+    };
+
+    let b_id = tree.root().first_child().unwrap().id();
+    let mut b_node = tree.get_mut(b_id).unwrap();
+    let mut subtree = b_node.clone_subtree();
+    let subtree = subtree.as_ref();
+
+    assert_eq!(*subtree.value(), 'b');
+    assert!(subtree.parent().is_none());
+    assert!(subtree.prev_sibling().is_none());
+    assert!(subtree.next_sibling().is_none());
+
+    let children: Vec<_> = subtree.children().collect();
+    assert_eq!(children.len(), 3);
+    assert_eq!(*children[0].value(), 'd');
+    assert_eq!(children[0].parent(), Some(subtree));
+    assert_eq!(children[0].children().count(), 0);
+    assert_eq!(*children[1].value(), 'e');
+    assert_eq!(children[1].parent(), Some(subtree));
+    assert_eq!(children[1].children().count(), 2);
+    assert_eq!(children[2].parent(), Some(subtree));
+    assert_eq!(*children[2].value(), 'f');
+    assert_eq!(children[2].children().count(), 0);
+
+    let e_children: Vec<_> = children[1].children().collect();
+    assert_eq!(e_children.len(), 2);
+    assert_eq!(*e_children[0].value(), 'g');
+    assert_eq!(e_children[0].parent(), Some(children[1]));
+    assert_eq!(e_children[0].children().count(), 0);
+    assert_eq!(*e_children[1].value(), 'h');
+    assert_eq!(e_children[1].parent(), Some(children[1]));
+    assert_eq!(e_children[1].children().count(), 0);
+}

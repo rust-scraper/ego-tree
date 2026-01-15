@@ -910,6 +910,92 @@ impl<'a, T: 'a> NodeMut<'a, T> {
 
         self.node().children = Some((new_child_ids.0, old_child_ids.1));
     }
+
+    /// Clone a subtree as orphan, returning the cloned root node.
+    pub fn clone_subtree(&mut self) -> NodeMut<'_, T>
+    where
+        T: Clone,
+    {
+        enum Edge {
+            Open {
+                cur: NodeId,
+                cloned_parent: Option<NodeId>,
+            },
+            Close {
+                cur: NodeId,
+                cloned_cur: NodeId,
+                cloned_parent: Option<NodeId>,
+            },
+        }
+
+        let mut edge = Edge::Open {
+            cur: self.id,
+            cloned_parent: None,
+        };
+
+        loop {
+            match edge {
+                Edge::Open { cur, cloned_parent } => {
+                    let node = unsafe { self.tree.node(cur) };
+                    let first_child = node.children.map(|(id, _)| id);
+
+                    let cloned_value = node.value.clone();
+                    let cloned_node = self.tree.orphan(cloned_value).id;
+
+                    if let Some(cloned_parent) = cloned_parent {
+                        unsafe {
+                            self.tree
+                                .get_unchecked_mut(cloned_parent)
+                                .append_id(cloned_node);
+                        }
+                    }
+
+                    if let Some(first_child) = first_child {
+                        edge = Edge::Open {
+                            cur: first_child,
+                            cloned_parent: Some(cloned_node),
+                        };
+                    } else {
+                        edge = Edge::Close {
+                            cur,
+                            cloned_cur: cloned_node,
+                            cloned_parent,
+                        };
+                    }
+                }
+                Edge::Close {
+                    cur,
+                    cloned_cur,
+                    cloned_parent,
+                } => {
+                    if cur == self.id {
+                        return unsafe { self.tree.get_unchecked_mut(cloned_cur) };
+                    }
+
+                    let node = unsafe { self.tree.node(cur) };
+                    if let Some(next_sibling) = node.next_sibling {
+                        edge = Edge::Open {
+                            cur: next_sibling,
+                            cloned_parent,
+                        };
+                    } else {
+                        // Since the current node is not the root, both its parent and
+                        // cloned node parent are guaranteed to exist.
+                        let parent = node.parent.unwrap();
+                        let cloned_node = unsafe { self.tree.node(cloned_cur) };
+                        let cloned_parent = cloned_node.parent.unwrap();
+                        let cloned_grandparent = unsafe { self.tree.node(cloned_parent).parent };
+
+                        edge = Edge::Close {
+                            cur: parent,
+                            cloned_cur: cloned_parent,
+                            cloned_parent: cloned_grandparent,
+                        };
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl<'a, T: 'a> From<NodeMut<'a, T>> for NodeRef<'a, T> {
