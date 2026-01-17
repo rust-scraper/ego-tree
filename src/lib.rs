@@ -36,7 +36,7 @@
 )]
 
 use std::fmt::{self, Debug, Display, Formatter};
-use std::num::NonZeroUsize;
+use std::hash::Hash;
 
 #[cfg(feature = "serde")]
 pub mod serde;
@@ -45,35 +45,97 @@ pub mod serde;
 ///
 /// Always contains at least a root node.
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Tree<T> {
-    vec: Vec<Node<T>>,
+pub struct Tree<T, Id: ID = NodeId> {
+    vec: Vec<Node<T, Id>>,
 }
 
-/// Node ID.
-///
-/// Index into a `Tree`-internal `Vec`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct NodeId(NonZeroUsize);
+/// ID
+/// 
+/// Trait that can be implemented for custom tagged ids.
+/// This allows IDs obtained from different trees to be differentiated from
+/// one another at the type level.
+pub trait ID: Debug + Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Hash {
+    /// Given a usize not equal to `usize::MAX`, constructs an ID. 
+    /// 
+    /// # Safety
+    /// `n` must not equal `usize::MAX`.
+    /// (This is never the case for `Vec::len()`, that would mean it owns
+    /// the entire address space without leaving space even for its pointer.)    
+    unsafe fn from_index(n: usize) -> Self;
 
-impl NodeId {
-    // Safety: `n` must not equal `usize::MAX`.
-    // (This is never the case for `Vec::len()`, that would mean it owns
-    // the entire address space without leaving space even for its pointer.)
-    unsafe fn from_index(n: usize) -> Self {
-        NodeId(NonZeroUsize::new_unchecked(n + 1))
+    /// Returns the same `n` usize that was passed into from_index 
+    fn to_index(self) -> usize;
+
+    /// Transmutes an ID from one tagged type to another
+    fn transmute<T: ID>(self) -> T {
+        // Safety: Adding 0 will never cause offset to go above `usize::MAX`
+        unsafe { self.transmute_offset(0) }
     }
 
-    fn to_index(self) -> usize {
-        self.0.get() - 1
+    /// Transmutes an ID from one tagged type to another, adding the specified offset
+    /// 
+    /// # Safety
+    /// `offset` must not be high enough to cause the internal index to go above
+    /// `usize::MAX`. (This is never the case when adding two `Vec::len()`` together,
+    /// that would mean it owns the entire address space without leaving space for
+    /// either pointer)
+    unsafe fn transmute_offset<T: ID>(self, offset: usize) -> T {
+        unsafe { T::from_index(self.to_index() + offset) }
     }
+}
+
+/// Constructs a custom ID type to use in differentiating trees.
+/// 
+/// # Calling 
+/// ```
+/// #[macro_use] extern crate ego_tree;
+/// ids!{
+///     /// Used for tree type 1
+///     IdType1,
+///     /// Used for tree type 2
+///     IdType2
+/// }
+/// # fn main() {
+///     let tree_one = Tree::new_tagged<IdType1>();
+///     let tree_two = Tree::new_tagged<IdType2>();
+///     // IDs from tree_one won't be accepted by tree_two
+/// }
+/// ```
+#[macro_export]
+macro_rules! ids {
+    ($(#[$m:meta] $i:ident$(,)?)*) => {
+        $(
+            #[$m]
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            pub struct $i(::std::num::NonZeroUsize);
+
+            impl $crate::ID for $i {
+                // Safety: `n` must not equal `usize::MAX`.
+                // (This is never the case for `Vec::len()`, that would mean it owns
+                // the entire address space without leaving space even for its pointer.)
+                unsafe fn from_index(n: usize) -> Self {
+                    $i(unsafe { ::std::num::NonZeroUsize::new_unchecked(n + 1) })
+                }
+
+                fn to_index(self) -> usize {
+                    self.0.get() - 1
+                }
+            }
+        )*
+    };
+}
+
+ids!{ 
+    /// Standard ID
+    NodeId
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct Node<T> {
-    parent: Option<NodeId>,
-    prev_sibling: Option<NodeId>,
-    next_sibling: Option<NodeId>,
-    children: Option<(NodeId, NodeId)>,
+struct Node<T, Id: ID = NodeId> {
+    parent: Option<Id>,
+    prev_sibling: Option<Id>,
+    next_sibling: Option<Id>,
+    children: Option<(Id, Id)>,
     value: T,
 }
 
@@ -81,11 +143,11 @@ fn _static_assert_size_of_node() {
     // "Instantiating" the generic `transmute` function without calling it
     // still triggers the magic compile-time check
     // that input and output types have the same `size_of()`.
-    let _ = std::mem::transmute::<Node<()>, [usize; 5]>;
+    let _ = std::mem::transmute::<Node<(), NodeId>, [usize; 5]>;
 }
 
-impl<T> Node<T> {
-    fn new(value: T) -> Self {
+impl<T, I: ID> Node<T, I> {
+    fn new(value: T) -> Node<T, I> {
         Node {
             parent: None,
             prev_sibling: None,
@@ -95,7 +157,7 @@ impl<T> Node<T> {
         }
     }
 
-    pub fn map<F, U>(self, mut transform: F) -> Node<U>
+    pub fn map<F, U>(self, mut transform: F) -> Node<U, I>
     where
         F: FnMut(T) -> U,
     {
@@ -108,7 +170,7 @@ impl<T> Node<T> {
         }
     }
 
-    pub fn map_ref<F, U>(&self, mut transform: F) -> Node<U>
+    pub fn map_ref<F, U>(&self, mut transform: F) -> Node<U, I>
     where
         F: FnMut(&T) -> U,
     {
@@ -120,41 +182,56 @@ impl<T> Node<T> {
             value: transform(&self.value),
         }
     }
+
+    fn transmute_ids<F, O>(self, transform: F) -> Node<T, O>
+    where
+        F: (Fn(I) -> O) + Copy,
+        O: ID
+    {
+        Node {
+            parent: self.parent.map(transform),
+            prev_sibling: self.prev_sibling.map(transform),
+            next_sibling: self.next_sibling.map(transform),
+            children: self.children.map(|(id1, id2)| (transform(id1), transform(id2))),
+            value: self.value
+        }
+
+    }
 }
 
 /// Node reference.
 #[derive(Debug)]
-pub struct NodeRef<'a, T: 'a> {
+pub struct NodeRef<'a, T: 'a, I: ID = NodeId> {
     /// Node ID.
-    id: NodeId,
+    id: I,
 
     /// Tree containing the node.
-    tree: &'a Tree<T>,
+    tree: &'a Tree<T, I>,
 
-    node: &'a Node<T>,
+    node: &'a Node<T, I>,
 }
 
 /// Node mutator.
 #[derive(Debug)]
-pub struct NodeMut<'a, T: 'a> {
+pub struct NodeMut<'a, T: 'a, I: ID = NodeId> {
     /// Node ID.
-    id: NodeId,
+    id: I,
 
     /// Tree containing the node.
-    tree: &'a mut Tree<T>,
+    tree: &'a mut Tree<T, I>,
 }
 
 // Trait implementations regardless of T.
 
-impl<'a, T: 'a> Copy for NodeRef<'a, T> {}
-impl<'a, T: 'a> Clone for NodeRef<'a, T> {
+impl<'a, T: 'a, I: ID> Copy for NodeRef<'a, T, I> {}
+impl<'a, T: 'a, I: ID> Clone for NodeRef<'a, T, I> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, T: 'a> Eq for NodeRef<'a, T> {}
-impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
+impl<'a, T: 'a, I: ID> Eq for NodeRef<'a, T, I> {}
+impl<'a, T: 'a, I: ID> PartialEq for NodeRef<'a, T, I> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && std::ptr::eq(self.tree, other.tree)
@@ -165,8 +242,15 @@ impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
 impl<T> Tree<T> {
     /// Creates a tree with a root node.
     pub fn new(root: T) -> Self {
+        Self::new_tagged(root)
+    }
+}
+
+impl<T, I: ID> Tree<T, I> {
+    /// Creates a tree with a root node with tagged ids.
+    pub fn new_tagged(root: T) -> Self {
         Tree {
-            vec: vec![Node::new(root)],
+            vec: vec![Node::<T, I>::new(root)]
         }
     }
 
@@ -178,7 +262,7 @@ impl<T> Tree<T> {
     }
 
     /// Returns a reference to the specified node.
-    pub fn get(&self, id: NodeId) -> Option<NodeRef<'_, T>> {
+    pub fn get(&self, id: I) -> Option<NodeRef<'_, T, I>> {
         self.vec.get(id.to_index()).map(|node| NodeRef {
             id,
             node,
@@ -187,23 +271,23 @@ impl<T> Tree<T> {
     }
 
     /// Returns a mutator of the specified node.
-    pub fn get_mut(&mut self, id: NodeId) -> Option<NodeMut<'_, T>> {
+    pub fn get_mut(&mut self, id: I) -> Option<NodeMut<'_, T, I>> {
         let exists = self.vec.get(id.to_index()).map(|_| ());
         exists.map(move |_| NodeMut { id, tree: self })
     }
 
-    unsafe fn node(&self, id: NodeId) -> &Node<T> {
+    unsafe fn node(&self, id: I) -> &Node<T, I> {
         self.vec.get_unchecked(id.to_index())
     }
 
-    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
+    unsafe fn node_mut(&mut self, id: I) -> &mut Node<T, I> {
         self.vec.get_unchecked_mut(id.to_index())
     }
 
     /// Returns a reference to the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> {
+    pub unsafe fn get_unchecked(&self, id: I) -> NodeRef<'_, T, I> {
         NodeRef {
             id,
             node: self.node(id),
@@ -214,23 +298,23 @@ impl<T> Tree<T> {
     /// Returns a mutator of the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked_mut(&mut self, id: NodeId) -> NodeMut<'_, T> {
+    pub unsafe fn get_unchecked_mut(&mut self, id: I) -> NodeMut<'_, T, I> {
         NodeMut { id, tree: self }
     }
 
     /// Returns a reference to the root node.
-    pub fn root(&self) -> NodeRef<'_, T> {
-        unsafe { self.get_unchecked(NodeId::from_index(0)) }
+    pub fn root(&self) -> NodeRef<'_, T, I> {
+        unsafe { self.get_unchecked(I::from_index(0)) }
     }
 
     /// Returns a mutator of the root node.
-    pub fn root_mut(&mut self) -> NodeMut<'_, T> {
-        unsafe { self.get_unchecked_mut(NodeId::from_index(0)) }
+    pub fn root_mut(&mut self) -> NodeMut<'_, T, I> {
+        unsafe { self.get_unchecked_mut(I::from_index(0)) }
     }
 
     /// Creates an orphan node.
-    pub fn orphan(&mut self, value: T) -> NodeMut<'_, T> {
-        let id = unsafe { NodeId::from_index(self.vec.len()) };
+    pub fn orphan(&mut self, value: T) -> NodeMut<'_, T, I> {
+        let id = unsafe { I::from_index(self.vec.len()) };
         self.vec.push(Node::new(value));
         unsafe { self.get_unchecked_mut(id) }
     }
@@ -238,13 +322,9 @@ impl<T> Tree<T> {
     /// Merge with another tree as orphan, returning the new root of tree being merged.
     // Allowing this for compactness.
     #[allow(clippy::option_map_unit_fn)]
-    pub fn extend_tree(&mut self, mut other_tree: Tree<T>) -> NodeMut<'_, T> {
+    pub fn extend_tree(&mut self, mut other_tree: Tree<T, I>) -> NodeMut<'_, T, I> {
         let offset = self.vec.len();
-        let offset_id = |id: NodeId| -> NodeId {
-            let old_index = id.to_index();
-            let new_index = old_index + offset;
-            unsafe { NodeId::from_index(new_index) }
-        };
+        let offset_id = |id: I| unsafe { id.transmute_offset(offset) };
         let other_tree_root_id = offset_id(other_tree.root().id);
         for node in other_tree.vec.iter_mut() {
             node.parent.as_mut().map(|id| *id = offset_id(*id));
@@ -259,9 +339,25 @@ impl<T> Tree<T> {
         unsafe { self.get_unchecked_mut(other_tree_root_id) }
     }
 
+    /// Merge with another tree as orphan, returning the new root of tree being merged.
+    // Allowing this for compactness.
+    #[allow(clippy::option_map_unit_fn)]
+    pub fn extend_tree_transmute<O>(&mut self, other_tree: Tree<T, O>) -> NodeMut<'_, T, I>
+    where
+        O: ID
+    {
+        let offset = self.vec.len();
+        let offset_id = |id: O| -> I { unsafe { id.transmute_offset::<I>(offset) }};
+        let other_tree_root_id = offset_id(other_tree.root().id);
+        let other = other_tree.vec.into_iter()
+            .map(|node| -> Node<T, I> { node.transmute_ids(offset_id) });
+        self.vec.extend(other);
+        unsafe { self.get_unchecked_mut(other_tree_root_id) }
+    }
+
     /// Maps a `Tree<T>` to `Tree<U>` by applying a function to all node values,
     /// copying over the tree's structure and node ids untouched, consuming `self`.
-    pub fn map<F, U>(self, mut transform: F) -> Tree<U>
+    pub fn map<F, U>(self, mut transform: F) -> Tree<U, I>
     where
         F: FnMut(T) -> U,
     {
@@ -276,7 +372,7 @@ impl<T> Tree<T> {
 
     /// Maps a `&Tree<T>` to `Tree<U>` by applying a function to all node values,
     /// copying over the tree's structure and node ids untouched.
-    pub fn map_ref<F, U>(&self, mut transform: F) -> Tree<U>
+    pub fn map_ref<F, U>(&self, mut transform: F) -> Tree<U, I>
     where
         F: FnMut(&T) -> U,
     {
@@ -290,14 +386,14 @@ impl<T> Tree<T> {
     }
 }
 
-impl<'a, T: 'a> NodeRef<'a, T> {
+impl<'a, T: 'a, I: ID> NodeRef<'a, T, I> {
     /// Returns the ID of this node.
-    pub fn id(&self) -> NodeId {
+    pub fn id(&self) -> I {
         self.id
     }
 
     /// Returns the tree owning this node.
-    pub fn tree(&self) -> &'a Tree<T> {
+    pub fn tree(&self) -> &'a Tree<T, I> {
         self.tree
     }
 
@@ -308,7 +404,7 @@ impl<'a, T: 'a> NodeRef<'a, T> {
 
     fn axis<F>(&self, f: F) -> Option<Self>
     where
-        F: FnOnce(&Node<T>) -> Option<NodeId>,
+        F: FnOnce(&Node<T, I>) -> Option<I>,
     {
         f(self.node).map(|id| unsafe { self.tree.get_unchecked(id) })
     }
@@ -349,18 +445,18 @@ impl<'a, T: 'a> NodeRef<'a, T> {
     }
 }
 
-impl<'a, T: 'a> NodeMut<'a, T> {
+impl<'a, T: 'a, I: ID> NodeMut<'a, T, I> {
     /// Returns the ID of this node.
-    pub fn id(&self) -> NodeId {
+    pub fn id(&self) -> I {
         self.id
     }
 
     /// Returns the tree owning this node.
-    pub fn tree(&mut self) -> &mut Tree<T> {
+    pub fn tree(&mut self) -> &mut Tree<T, I> {
         self.tree
     }
 
-    fn node(&mut self) -> &mut Node<T> {
+    fn node(&mut self) -> &mut Node<T, I> {
         unsafe { self.tree.node_mut(self.id) }
     }
 
@@ -370,13 +466,13 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Downcast `NodeMut` to `NodeRef`.
-    pub fn as_ref(&mut self) -> NodeRef<'_, T> {
+    pub fn as_ref(&mut self) -> NodeRef<'_, T, I> {
         unsafe { self.tree.get_unchecked(self.id) }
     }
 
-    fn axis<F>(&mut self, f: F) -> Option<NodeMut<'_, T>>
+    fn axis<F>(&mut self, f: F) -> Option<NodeMut<'_, T, I>>
     where
-        F: FnOnce(&mut Node<T>) -> Option<NodeId>,
+        F: FnOnce(&mut Node<T, I>) -> Option<I>,
     {
         let id = f(self.node());
         id.map(move |id| unsafe { self.tree.get_unchecked_mut(id) })
@@ -384,7 +480,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
 
     fn into_axis<F>(mut self, f: F) -> Result<Self, Self>
     where
-        F: FnOnce(&mut Node<T>) -> Option<NodeId>,
+        F: FnOnce(&mut Node<T, I>) -> Option<I>,
     {
         let id = f(self.node());
         match id {
@@ -394,7 +490,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the parent of this node.
-    pub fn parent(&mut self) -> Option<NodeMut<'_, T>> {
+    pub fn parent(&mut self) -> Option<NodeMut<'_, T, I>> {
         self.axis(|node| node.parent)
     }
 
@@ -407,7 +503,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the previous sibling of this node.
-    pub fn prev_sibling(&mut self) -> Option<NodeMut<'_, T>> {
+    pub fn prev_sibling(&mut self) -> Option<NodeMut<'_, T, I>> {
         self.axis(|node| node.prev_sibling)
     }
 
@@ -420,7 +516,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the next sibling of this node.
-    pub fn next_sibling(&mut self) -> Option<NodeMut<'_, T>> {
+    pub fn next_sibling(&mut self) -> Option<NodeMut<'_, T, I>> {
         self.axis(|node| node.next_sibling)
     }
 
@@ -433,7 +529,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the first child of this node.
-    pub fn first_child(&mut self) -> Option<NodeMut<'_, T>> {
+    pub fn first_child(&mut self) -> Option<NodeMut<'_, T, I>> {
         self.axis(|node| node.children.map(|(id, _)| id))
     }
 
@@ -446,7 +542,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Returns the last child of this node.
-    pub fn last_child(&mut self) -> Option<NodeMut<'_, T>> {
+    pub fn last_child(&mut self) -> Option<NodeMut<'_, T, I>> {
         self.axis(|node| node.children.map(|(_, id)| id))
     }
 
@@ -471,7 +567,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for each ancestor mutable node reference.
     pub fn for_each_ancestor<'b, F>(&'b mut self, mut f: F)
     where
-        F: FnMut(&mut NodeMut<'b, T>),
+        F: FnMut(&mut NodeMut<'b, T, I>),
     {
         let mut current = self.parent();
         while let Some(mut node) = current {
@@ -483,7 +579,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for each next sibling mutable node reference.
     pub fn for_each_next_sibling<'b, F>(&'b mut self, mut f: F)
     where
-        F: FnMut(&mut NodeMut<'b, T>),
+        F: FnMut(&mut NodeMut<'b, T, I>),
     {
         let mut current = self.next_sibling();
         while let Some(mut node) = current {
@@ -495,7 +591,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for each previout sibling mutable node reference.
     pub fn for_each_prev_sibling<'b, F>(&'b mut self, mut f: F)
     where
-        F: FnMut(&mut NodeMut<'b, T>),
+        F: FnMut(&mut NodeMut<'b, T, I>),
     {
         let mut current = self.prev_sibling();
         while let Some(mut node) = current {
@@ -507,7 +603,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for this node and each sibling mutable node reference.
     pub fn for_each_sibling<F>(&mut self, mut f: F)
     where
-        F: for<'b> FnMut(&mut NodeMut<'b, T>),
+        F: for<'b> FnMut(&mut NodeMut<'b, T, I>),
     {
         self.for_each_prev_sibling(&mut f);
         f(self);
@@ -517,7 +613,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for each children mutable node reference.
     pub fn for_each_child<F>(&mut self, mut f: F)
     where
-        F: for<'b> FnMut(&mut NodeMut<'b, T>),
+        F: for<'b> FnMut(&mut NodeMut<'b, T, I>),
     {
         let Some(mut first_child) = self.first_child() else {
             return;
@@ -529,7 +625,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// Apply function for this node and each descendant mutable node reference.
     pub fn for_each_descendant<F>(&mut self, mut f: F)
     where
-        F: FnMut(&mut NodeMut<'_, T>),
+        F: FnMut(&mut NodeMut<'_, T, I>),
     {
         let id = self.id();
 
@@ -579,35 +675,52 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     }
 
     /// Appends a new child to this node.
-    pub fn append(&mut self, value: T) -> NodeMut<'_, T> {
+    pub fn append(&mut self, value: T) -> NodeMut<'_, T, I> {
         let id = self.tree.orphan(value).id;
         self.append_id(id)
     }
 
     /// Prepends a new child to this node.
-    pub fn prepend(&mut self, value: T) -> NodeMut<'_, T> {
+    pub fn prepend(&mut self, value: T) -> NodeMut<'_, T, I> {
         let id = self.tree.orphan(value).id;
         self.prepend_id(id)
     }
 
     /// Appends a subtree, return the root of the merged subtree.
-    pub fn append_subtree(&mut self, subtree: Tree<T>) -> NodeMut<'_, T> {
+    pub fn append_subtree(&mut self, subtree: Tree<T, I>) -> NodeMut<'_, T, I> {
         let root_id = self.tree.extend_tree(subtree).id;
         self.append_id(root_id)
     }
 
+    /// Transmutes and appends a subtree, return the root of the merged subtree
+    pub fn append_transmute_subtree<O>(&mut self, subtree: Tree<T, O>) -> NodeMut<'_, T, I> 
+    where 
+        O: ID
+     {
+        let root_id = self.tree.extend_tree_transmute(subtree).id;
+        self.append_id(root_id)
+    }
+
     /// Prepends a subtree, return the root of the merged subtree.
-    pub fn prepend_subtree(&mut self, subtree: Tree<T>) -> NodeMut<'_, T> {
+    pub fn prepend_subtree(&mut self, subtree: Tree<T, I>) -> NodeMut<'_, T, I> {
         let root_id = self.tree.extend_tree(subtree).id;
         self.prepend_id(root_id)
     }
 
+    /// Transmutes and prepends a subtree, return the root of the merged subtree.
+    pub fn prepend_transmute_subtree<O>(&mut self, subtree: Tree<T, O>) -> NodeMut<'_, T, I> 
+    where 
+        O: ID
+     {
+        let root_id = self.tree.extend_tree_transmute(subtree).id;
+        self.prepend_id(root_id)
+     }
     /// Inserts a new sibling before this node.
     ///
     /// # Panics
     ///
     /// Panics if this node is an orphan.
-    pub fn insert_before(&mut self, value: T) -> NodeMut<'_, T> {
+    pub fn insert_before(&mut self, value: T) -> NodeMut<'_, T, I> {
         let id = self.tree.orphan(value).id;
         self.insert_id_before(id)
     }
@@ -617,7 +730,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if this node is an orphan.
-    pub fn insert_after(&mut self, value: T) -> NodeMut<'_, T> {
+    pub fn insert_after(&mut self, value: T) -> NodeMut<'_, T, I> {
         let id = self.tree.orphan(value).id;
         self.insert_id_after(id)
     }
@@ -664,7 +777,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `new_child_id` is not valid.
-    pub fn append_id(&mut self, new_child_id: NodeId) -> NodeMut<'_, T> {
+    pub fn append_id(&mut self, new_child_id: I) -> NodeMut<'_, T, I> {
         assert_ne!(
             self.id(),
             new_child_id,
@@ -703,7 +816,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `new_child_id` is not valid.
-    pub fn prepend_id(&mut self, new_child_id: NodeId) -> NodeMut<'_, T> {
+    pub fn prepend_id(&mut self, new_child_id: I) -> NodeMut<'_, T, I> {
         assert_ne!(
             self.id(),
             new_child_id,
@@ -743,7 +856,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
-    pub fn insert_id_before(&mut self, new_sibling_id: NodeId) -> NodeMut<'_, T> {
+    pub fn insert_id_before(&mut self, new_sibling_id: I) -> NodeMut<'_, T, I> {
         assert_ne!(
             self.id(),
             new_sibling_id,
@@ -786,7 +899,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     ///
     /// - Panics if `new_sibling_id` is not valid.
     /// - Panics if this node is an orphan.
-    pub fn insert_id_after(&mut self, new_sibling_id: NodeId) -> NodeMut<'_, T> {
+    pub fn insert_id_after(&mut self, new_sibling_id: I) -> NodeMut<'_, T, I> {
         assert_ne!(
             self.id(),
             new_sibling_id,
@@ -828,7 +941,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `from_id` is not valid.
-    pub fn reparent_from_id_append(&mut self, from_id: NodeId) {
+    pub fn reparent_from_id_append(&mut self, from_id: I) {
         assert_ne!(
             self.id(),
             from_id,
@@ -872,7 +985,7 @@ impl<'a, T: 'a> NodeMut<'a, T> {
     /// # Panics
     ///
     /// Panics if `from_id` is not valid.
-    pub fn reparent_from_id_prepend(&mut self, from_id: NodeId) {
+    pub fn reparent_from_id_prepend(&mut self, from_id: I) {
         assert_ne!(
             self.id(),
             from_id,
@@ -1049,6 +1162,24 @@ pub mod iter;
 /// };
 /// # }
 /// ```
+/// Specify the ID type by adding it as the first argument 
+/// ```
+/// #[macro_use] extern crate ego_tree;
+/// # fn main() {
+/// ids! { 
+///     /// For demo purposes
+///     MyCustomID 
+/// }
+/// let tagged_tree = tree!{ 
+///     MyCustomID, 
+///     "root" => {
+///         "child_1",
+///         "child_2"
+///     }
+/// };
+/// # }
+/// ```
+/// 
 #[macro_export]
 macro_rules! tree {
     (@ $n:ident { }) => { };
@@ -1104,9 +1235,25 @@ macro_rules! tree {
             tree
         }
     };
+
+    ($t:ty, $root:expr) => { 
+        let tree: $crate::Tree<_, $t> = $crate::Tree::new_tagged($root);
+        tree
+    };
+
+    ($t:ty, $root:expr => $children:tt) => {
+        {
+            let mut tree: $crate::Tree<_, $t> = $crate::Tree::new_tagged($root);
+            {
+                let mut node = tree.root_mut();
+                tree!(@ node $children);
+            }
+            tree
+        }
+    };
 }
 
-impl<T: Debug> Debug for Tree<T> {
+impl<T: Debug, Id: ID> Debug for Tree<T, Id> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use crate::iter::Edge;
         if f.alternate() {
@@ -1142,7 +1289,7 @@ impl<T: Debug> Debug for Tree<T> {
 // Handles display
 mod display;
 
-impl<T: Display> Display for Tree<T> {
+impl<T: Display, I: ID> Display for Tree<T, I> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         use crate::display::Indentation;
         use crate::iter::Edge;
