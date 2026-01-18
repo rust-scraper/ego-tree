@@ -1025,19 +1025,19 @@ impl<'a, T: 'a, I: ID> NodeMut<'a, T, I> {
     }
 
     /// Clone a subtree as orphan, returning the cloned root node.
-    pub fn clone_subtree(&mut self) -> NodeMut<'_, T>
+    pub fn clone_subtree(&mut self) -> NodeMut<'_, T, I>
     where
         T: Clone,
     {
-        enum Edge {
+        enum Edge<I: ID = NodeId> {
             Open {
-                cur: NodeId,
-                cloned_parent: Option<NodeId>,
+                cur: I,
+                cloned_parent: Option<I>,
             },
             Close {
-                cur: NodeId,
-                cloned_cur: NodeId,
-                cloned_parent: Option<NodeId>,
+                cur: I,
+                cloned_cur: I,
+                cloned_parent: Option<I>,
             },
         }
 
