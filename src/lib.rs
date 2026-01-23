@@ -59,9 +59,9 @@ impl NodeId {
     // Safety: `n` must not equal `usize::MAX`.
     // (This is never the case for `Vec::len()`, that would mean it owns
     // the entire address space without leaving space even for its pointer.)
-    unsafe fn from_index(n: usize) -> Self {
+    unsafe fn from_index(n: usize) -> Self { unsafe {
         NodeId(NonZeroUsize::new_unchecked(n + 1))
-    }
+    }}
 
     fn to_index(self) -> usize {
         self.0.get() - 1
@@ -192,24 +192,24 @@ impl<T> Tree<T> {
         exists.map(move |_| NodeMut { id, tree: self })
     }
 
-    unsafe fn node(&self, id: NodeId) -> &Node<T> {
+    unsafe fn node(&self, id: NodeId) -> &Node<T> { unsafe {
         self.vec.get_unchecked(id.to_index())
-    }
+    }}
 
-    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
+    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> { unsafe {
         self.vec.get_unchecked_mut(id.to_index())
-    }
+    }}
 
     /// Returns a reference to the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> {
+    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> { unsafe {
         NodeRef {
             id,
             node: self.node(id),
             tree: self,
         }
-    }
+    }}
 
     /// Returns a mutator of the specified node.
     /// # Safety
@@ -1054,12 +1054,12 @@ macro_rules! tree {
     (@ $n:ident { }) => { };
 
     // Last leaf.
-    (@ $n:ident { $value:expr }) => {
+    (@ $n:ident { $value:expr_2021 }) => {
         { $n.append($value); }
     };
 
     // Leaf.
-    (@ $n:ident { $value:expr, $($tail:tt)* }) => {
+    (@ $n:ident { $value:expr_2021, $($tail:tt)* }) => {
         {
             $n.append($value);
             tree!(@ $n { $($tail)* });
@@ -1067,7 +1067,7 @@ macro_rules! tree {
     };
 
     // Last node with children.
-    (@ $n:ident { $value:expr => $children:tt }) => {
+    (@ $n:ident { $value:expr_2021 => $children:tt }) => {
         {
             let mut node = $n.append($value);
             tree!(@ node $children);
@@ -1075,7 +1075,7 @@ macro_rules! tree {
     };
 
     // Node with children.
-    (@ $n:ident { $value:expr => $children:tt, $($tail:tt)* }) => {
+    (@ $n:ident { $value:expr_2021 => $children:tt, $($tail:tt)* }) => {
         {
             {
                 let mut node = $n.append($value);
@@ -1086,15 +1086,15 @@ macro_rules! tree {
     };
 
     // Append subtree from expression.
-    (@ $n:ident { @ $subtree:expr $(, $($tail:tt)*)? }) => {{
+    (@ $n:ident { @ $subtree:expr_2021 $(, $($tail:tt)*)? }) => {{
         $n.append_subtree($subtree);
         $( tree!(@ $n { $($tail)* }); )?
     }};
 
 
-    ($root:expr) => { $crate::Tree::new($root) };
+    ($root:expr_2021) => { $crate::Tree::new($root) };
 
-    ($root:expr => $children:tt) => {
+    ($root:expr_2021 => $children:tt) => {
         {
             let mut tree = $crate::Tree::new($root);
             {

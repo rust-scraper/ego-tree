@@ -1,6 +1,6 @@
 [package]
 name = "ego-tree"
-edition = "2021"
+edition = "2024"
 version = "0.11.0"
 description = "Vec-backed ID-tree"
 keywords = ["tree", "vec", "id", "index"]
