@@ -1,4 +1,4 @@
-use ego_tree::{tree, Tree};
+use ego_tree::{Tree, tree};
 
 #[test]
 fn new() {

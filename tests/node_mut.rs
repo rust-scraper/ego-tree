@@ -1,4 +1,4 @@
-use ego_tree::{tree, NodeRef};
+use ego_tree::{NodeRef, tree};
 
 #[test]
 fn value() {

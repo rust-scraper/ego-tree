@@ -7,7 +7,7 @@
 //!     └── 5
 //! ```
 
-use ego_tree::{tree, NodeMut, Tree};
+use ego_tree::{NodeMut, Tree, tree};
 
 fn main() {
     // Manual construction of the tree

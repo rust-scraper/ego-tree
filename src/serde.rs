@@ -7,9 +7,9 @@
 use std::{fmt, marker::PhantomData};
 
 use serde::{
+    Deserialize, Deserializer,
     de::{self, MapAccess, Visitor},
     ser::{Serialize, SerializeStruct},
-    Deserialize, Deserializer,
 };
 
 use crate::{NodeMut, NodeRef, Tree};

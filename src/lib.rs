@@ -59,9 +59,9 @@ impl NodeId {
     // Safety: `n` must not equal `usize::MAX`.
     // (This is never the case for `Vec::len()`, that would mean it owns
     // the entire address space without leaving space even for its pointer.)
-    unsafe fn from_index(n: usize) -> Self { unsafe {
-        NodeId(NonZeroUsize::new_unchecked(n + 1))
-    }}
+    unsafe fn from_index(n: usize) -> Self {
+        unsafe { NodeId(NonZeroUsize::new_unchecked(n + 1)) }
+    }
 
     fn to_index(self) -> usize {
         self.0.get() - 1
@@ -192,24 +192,26 @@ impl<T> Tree<T> {
         exists.map(move |_| NodeMut { id, tree: self })
     }
 
-    unsafe fn node(&self, id: NodeId) -> &Node<T> { unsafe {
-        self.vec.get_unchecked(id.to_index())
-    }}
+    unsafe fn node(&self, id: NodeId) -> &Node<T> {
+        unsafe { self.vec.get_unchecked(id.to_index()) }
+    }
 
-    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> { unsafe {
-        self.vec.get_unchecked_mut(id.to_index())
-    }}
+    unsafe fn node_mut(&mut self, id: NodeId) -> &mut Node<T> {
+        unsafe { self.vec.get_unchecked_mut(id.to_index()) }
+    }
 
     /// Returns a reference to the specified node.
     /// # Safety
     /// The caller must ensure that `id` is a valid node ID.
-    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> { unsafe {
-        NodeRef {
-            id,
-            node: self.node(id),
-            tree: self,
+    pub unsafe fn get_unchecked(&self, id: NodeId) -> NodeRef<'_, T> {
+        unsafe {
+            NodeRef {
+                id,
+                node: self.node(id),
+                tree: self,
+            }
         }
-    }}
+    }
 
     /// Returns a mutator of the specified node.
     /// # Safety
