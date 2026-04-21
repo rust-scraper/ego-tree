@@ -3,6 +3,7 @@ name = "ego-tree"
 edition = "2024"
 version = "0.11.0"
 description = "Vec-backed ID-tree"
+categories = ["data-structures"]
 keywords = ["tree", "vec", "id", "index"]
 authors = [
     "June McEnroe <june@causal.agency>",
