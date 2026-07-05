@@ -3,7 +3,8 @@
 //! This module provides methods for sorting children of a node in a tree.
 //! The sorting can be done based on the node values or their indices.
 
-use std::cmp::Ordering;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
 
 use crate::{NodeMut, NodeRef};
 

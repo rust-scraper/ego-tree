@@ -34,9 +34,13 @@
     missing_debug_implementations,
     missing_copy_implementations
 )]
+#![no_std]
 
-use std::fmt::{self, Debug, Display, Formatter};
-use std::num::NonZeroUsize;
+use alloc::vec::Vec;
+use core::fmt::{self, Debug, Display, Formatter};
+use core::num::NonZeroUsize;
+
+extern crate alloc;
 
 #[cfg(feature = "serde")]
 pub mod serde;
@@ -81,7 +85,7 @@ fn _static_assert_size_of_node() {
     // "Instantiating" the generic `transmute` function without calling it
     // still triggers the magic compile-time check
     // that input and output types have the same `size_of()`.
-    let _ = std::mem::transmute::<Node<()>, [usize; 5]>;
+    let _ = core::mem::transmute::<Node<()>, [usize; 5]>;
 }
 
 impl<T> Node<T> {
@@ -157,8 +161,8 @@ impl<'a, T: 'a> Eq for NodeRef<'a, T> {}
 impl<'a, T: 'a> PartialEq for NodeRef<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
-            && std::ptr::eq(self.tree, other.tree)
-            && std::ptr::eq(self.node, other.node)
+            && core::ptr::eq(self.tree, other.tree)
+            && core::ptr::eq(self.node, other.node)
     }
 }
 
@@ -166,7 +170,7 @@ impl<T> Tree<T> {
     /// Creates a tree with a root node.
     pub fn new(root: T) -> Self {
         Tree {
-            vec: vec![Node::new(root)],
+            vec: alloc::vec![Node::new(root)],
         }
     }
 

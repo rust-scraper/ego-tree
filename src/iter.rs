@@ -1,6 +1,7 @@
-use std::iter::FusedIterator;
-use std::ops::Range;
-use std::{slice, vec};
+use alloc::vec;
+use core::iter::FusedIterator;
+use core::ops::Range;
+use core::slice;
 
 use crate::{Node, NodeId, NodeRef, Tree};
 

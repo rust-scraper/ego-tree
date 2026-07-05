@@ -3,7 +3,7 @@ name = "ego-tree"
 edition = "2024"
 version = "0.11.0"
 description = "Vec-backed ID-tree"
-categories = ["data-structures"]
+categories = ["data-structures", "no-std"]
 keywords = ["tree", "vec", "id", "index"]
 authors = [
     "June McEnroe <june@causal.agency>",
@@ -14,11 +14,11 @@ repository = "https://github.com/rust-scraper/ego-tree"
 readme = "README.md"
 
 [features]
-serde = ["dep:serde"]
+serde = ["dep:serde_core"]
 
 [dependencies]
-serde = { version = "1.0.209", optional = true }
+serde_core = { version = "1.0.209", default-features = false, features = ["alloc"], optional = true }
 
 [dev-dependencies]
-serde = "1.0.209"
+serde_core = "1.0.209"
 serde_test = "1.0.177"

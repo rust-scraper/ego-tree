@@ -1,4 +1,5 @@
-use std::fmt::Display;
+use alloc::vec::Vec;
+use core::fmt::Display;
 
 /// Indentation token
 #[derive(Debug)]
@@ -10,7 +11,7 @@ struct Token {
 }
 
 impl Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let Token { siblings, children } = self;
 
         write!(
@@ -49,7 +50,7 @@ pub struct Indentation {
 }
 
 impl Display for Indentation {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let first: usize = if self.ignore_root { 1 } else { 0 };
 
         for token in &self.tokens[first..] {
