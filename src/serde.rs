@@ -1,14 +1,14 @@
-//! Implement `serde::Serialize` and `serde::Deserialize` traits for Tree
+//! Implement `serde_core::Serialize` and `serde_core::Deserialize` traits for Tree
 //!
 //! # Warning
 //! Serialize and Deserialize implementations are recursive. They require an amount of stack memory
 //! proportional to the depth of the tree.
 
-use std::{fmt, marker::PhantomData};
+use alloc::vec::Vec;
+use core::{fmt, marker::PhantomData};
 
-use serde::{
-    Deserialize, Deserializer,
-    de::{self, MapAccess, Visitor},
+use serde_core::{
+    de::{self, Deserialize, MapAccess, Visitor},
     ser::{Serialize, SerializeStruct},
 };
 
@@ -31,7 +31,7 @@ impl<'a, T> From<NodeRef<'a, T>> for SerNode<'a, T> {
 impl<T: Serialize> Serialize for SerNode<'_, T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: serde_core::Serializer,
     {
         let mut state = serializer.serialize_struct("Node", 2)?;
         state.serialize_field("value", &self.value)?;
@@ -43,7 +43,7 @@ impl<T: Serialize> Serialize for SerNode<'_, T> {
 impl<T: Serialize> Serialize for Tree<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: serde_core::Serializer,
     {
         SerNode::from(self.root()).serialize(serializer)
     }
@@ -140,7 +140,7 @@ where
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>,
+        D: serde_core::Deserializer<'de>,
     {
         deserializer.deserialize_struct("Node", &["value", "children"], DeserNodeVisitor::new())
     }
@@ -149,7 +149,7 @@ where
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Tree<T> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: serde_core::Deserializer<'de>,
     {
         let deser = DeserNode::<T>::deserialize(deserializer)?;
         Ok(deser.into())

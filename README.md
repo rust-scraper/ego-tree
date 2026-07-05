@@ -4,7 +4,7 @@
 [![downloads](https://img.shields.io/crates/d/ego-tree)][crate]
 [![test](https://github.com/rust-scraper/ego-tree/actions/workflows/test.yml/badge.svg)][tests]
 
-`ego-tree` is a Rust crate that provides a Vec-backed ID-tree implementation. It offers a flexible and efficient way to create and manipulate tree structures in Rust, with a focus on performance and ease of use.
+`ego-tree` is a Rust crate that provides a Vec-backed ID-tree implementation. It offers a flexible and efficient way to create and manipulate tree structures in Rust, with a focus on performance and ease of use. Usable in `no_std` contexts (requires `alloc`).
 
 `ego-tree` is on [Crates.io][crate] and [GitHub][github].
 
