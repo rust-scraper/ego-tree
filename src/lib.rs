@@ -756,12 +756,13 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             "Cannot insert node as a sibling of itself"
         );
 
+        self.tree.get_mut(new_sibling_id).unwrap().detach();
+
         let parent_id = self.node().parent.unwrap();
         let prev_sibling_id = self.node().prev_sibling;
 
         {
             let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
-            new_sibling.detach();
             new_sibling.node().parent = Some(parent_id);
             new_sibling.node().prev_sibling = prev_sibling_id;
             new_sibling.node().next_sibling = Some(self.id);
@@ -799,12 +800,13 @@ impl<'a, T: 'a> NodeMut<'a, T> {
             "Cannot insert node as a sibling of itself"
         );
 
+        self.tree.get_mut(new_sibling_id).unwrap().detach();
+
         let parent_id = self.node().parent.unwrap();
         let next_sibling_id = self.node().next_sibling;
 
         {
             let mut new_sibling = self.tree.get_mut(new_sibling_id).unwrap();
-            new_sibling.detach();
             new_sibling.node().parent = Some(parent_id);
             new_sibling.node().prev_sibling = Some(self.id);
             new_sibling.node().next_sibling = next_sibling_id;

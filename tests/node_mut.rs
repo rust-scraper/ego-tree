@@ -439,6 +439,38 @@ fn prepend_id_noop() {
 }
 
 #[test]
+fn insert_id_before_loop() {
+    let mut tree = tree! {
+        'a' => { 'b', 'c' }
+    };
+    let mut a = tree.root_mut();
+    let b_id = a.first_child().unwrap().id();
+    let mut c = a.last_child().unwrap();
+    c.insert_id_before(b_id);
+    let c_id = c.id();
+
+    let b = tree.get(b_id).unwrap();
+    assert_eq!(b.prev_sibling(), None);
+    assert_eq!(b.next_sibling().unwrap().id(), c_id);
+}
+
+#[test]
+fn insert_id_after_loop() {
+    let mut tree = tree! {
+        'a' => { 'b', 'c' }
+    };
+    let mut a = tree.root_mut();
+    let c_id = a.last_child().unwrap().id();
+    let mut b = a.first_child().unwrap();
+    b.insert_id_after(c_id);
+    let b_id = b.id();
+
+    let c = tree.get(c_id).unwrap();
+    assert_eq!(c.prev_sibling().unwrap().id(), b_id);
+    assert_eq!(c.next_sibling(), None);
+}
+
+#[test]
 fn reparent_from_id_append() {
     let mut tree = tree! {
         'a' => {
